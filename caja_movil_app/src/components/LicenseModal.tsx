@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Key, Lock, Phone, CheckCircle, AlertTriangle, X } from 'lucide-react';
-import { getLicenseInfo, activateLicense, type LicenseInfo } from '../utils/licenseManager';
+import { ShieldCheck, Key, Lock, Phone, CheckCircle, AlertTriangle, X, RefreshCw, Sparkles } from 'lucide-react';
+import { getLicenseInfo, activateLicense, simulateLicenseStatus, type LicenseInfo } from '../utils/licenseManager';
 
 interface LicenseModalProps {
   isOpen: boolean;
@@ -42,13 +42,25 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ isOpen, onClose, onA
     }
   };
 
+  const handleSimulate = (mode: 'TRIAL' | 'EXPIRED' | 'DEV') => {
+    const updated = simulateLicenseStatus(mode);
+    setLicense(updated);
+    setMsg({ 
+      text: mode === 'DEV' ? '👑 Modo Desarrollador Vitalicio Restaurado.' : 
+            mode === 'TRIAL' ? '⏳ Modo Simulación Cliente en Periodo de Prueba Activado.' :
+            '🔒 Modo Simulación Cliente Bloqueado/Expirado Activado.',
+      ok: true 
+    });
+    if (onActivated) onActivated();
+  };
+
   const isBlocked = license.status === 'EXPIRED_BLOCKED';
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in">
-      <div className="bg-nexus-900 border-2 border-amber-500/50 w-full max-w-lg rounded-3xl overflow-hidden shadow-[0_0_60px_rgba(245,158,11,0.25)] flex flex-col">
+      <div className="bg-nexus-900 border-2 border-amber-500/50 w-full max-w-lg rounded-3xl overflow-hidden shadow-[0_0_60px_rgba(245,158,11,0.25)] flex flex-col max-h-[92vh] overflow-y-auto">
         {/* ENCABEZADO */}
-        <div className="p-5 bg-gradient-to-r from-amber-600/30 to-amber-900/30 border-b border-amber-500/30 flex items-center justify-between">
+        <div className="p-5 bg-gradient-to-r from-amber-600/30 to-amber-900/30 border-b border-amber-500/30 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
               {isBlocked ? <Lock className="w-5 h-5 text-red-400" /> : <ShieldCheck className="w-5 h-5 text-amber-400" />}
@@ -57,7 +69,7 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ isOpen, onClose, onA
               <h3 className="text-white font-black text-base uppercase tracking-wider">
                 {isBlocked ? 'LICENCIA EXPIRADA - ACTIVACIÓN REQUERIDA' : 'SISTEMA DE LICENCIAMIENTO'}
               </h3>
-              <p className="text-slate-400 text-xs font-bold">NEXUS POS MÓVIL • EDICIÓN OFICIAL</p>
+              <p className="text-slate-400 text-xs font-bold">NEXUS POS • CONTROL DE ACTIVACIONES</p>
             </div>
           </div>
           {!isBlocked && (
@@ -91,9 +103,9 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ isOpen, onClose, onA
               <span className="text-white font-mono font-bold text-right truncate max-w-[220px]">{license.holder}</span>
             </div>
 
-            {license.isJosueFreePC && (
+            {license.isJosueFreePC && !license.simulationMode && (
               <p className="text-[11px] text-emerald-400 font-bold mt-1 bg-emerald-950/40 p-2 rounded-xl border border-emerald-500/30">
-                🎉 Modo Desarrollador Personal Activo: Tu PC cuenta con licencia ilimitada gratuita de por vida.
+                🎉 Tu equipo está reconocido como Desarrollador Oficial: Tienes uso libre y gratuito permanente.
               </p>
             )}
           </div>
@@ -108,62 +120,93 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ isOpen, onClose, onA
             </div>
           )}
 
-          {/* FORMULARIO DE ACTIVACIÓN */}
-          {license.status !== 'LIFETIME_DEV' && (
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-black text-amber-400 uppercase tracking-wider block mb-1">
-                  CLAVE DE LICENCIA O PIN MAESTRO
-                </label>
-                <div className="relative">
-                  <Key className="w-4 h-4 absolute left-3 top-3.5 text-slate-500" />
-                  <input 
-                    type="text"
-                    value={keyInput}
-                    onChange={e => setKeyInput(e.target.value)}
-                    placeholder="Ej: NEXUS-PRO-XXXX o PIN 9612"
-                    className="w-full bg-[#070d18] border border-nexus-700 text-white font-mono text-sm pl-9 pr-3 py-3 rounded-xl focus:outline-none focus:border-amber-400"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">
-                  NOMBRE DEL COMERCIO O CLIENTE (OPCIONAL)
-                </label>
+          {/* FORMULARIO DE ACTIVACIÓN (SIEMPRE DISPONIBLE PARA PROBAR) */}
+          <div className="space-y-3 bg-nexus-950/60 p-4 rounded-2xl border border-nexus-800">
+            <div>
+              <label className="text-xs font-black text-amber-400 uppercase tracking-wider block mb-1">
+                CLAVE DE LICENCIA O PIN MAESTRO
+              </label>
+              <div className="relative">
+                <Key className="w-4 h-4 absolute left-3 top-3.5 text-slate-500" />
                 <input 
                   type="text"
-                  value={clientInput}
-                  onChange={e => setClientInput(e.target.value)}
-                  placeholder="Ej: Miscelánea Brittany"
-                  className="w-full bg-[#070d18] border border-nexus-700 text-white text-xs px-3 py-2.5 rounded-xl focus:outline-none focus:border-amber-400"
+                  value={keyInput}
+                  onChange={e => setKeyInput(e.target.value)}
+                  placeholder="Escribe tu PIN: 9612 o Clave NEXUS-XXXX"
+                  className="w-full bg-[#070d18] border border-nexus-700 text-white font-mono text-sm pl-9 pr-3 py-3 rounded-xl focus:outline-none focus:border-amber-400"
                 />
               </div>
+              <p className="text-[10px] text-slate-400 mt-1">
+                💡 Puedes escribir tu PIN secreto: <strong className="text-amber-300">9612</strong> o cualquier clave generada.
+              </p>
+            </div>
 
-              <button
-                onClick={handleActivate}
-                className="w-full py-3.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-amber-600/30 active:scale-95 transition-all flex items-center justify-center gap-2"
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                NOMBRE DEL COMERCIO O CLIENTE
+              </label>
+              <input 
+                type="text"
+                value={clientInput}
+                onChange={e => setClientInput(e.target.value)}
+                placeholder="Ej: Abarrotes Don Pepe"
+                className="w-full bg-[#070d18] border border-nexus-700 text-white text-xs px-3 py-2.5 rounded-xl focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            <button
+              onClick={handleActivate}
+              className="w-full py-3.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-amber-600/30 active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              <Key className="w-4 h-4" /> ACTIVAR LICENCIA PERMANENTE
+            </button>
+          </div>
+
+          {/* BOTONES DE SIMULACIÓN PARA JOSUÉ */}
+          <div className="p-3 bg-[#070d18] rounded-2xl border border-nexus-800 space-y-2">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block text-center">
+              🧪 HERRAMIENTAS DE PRUEBA (SOLO PARA TI):
+            </span>
+            <div className="grid grid-cols-3 gap-2">
+              <button 
+                onClick={() => handleSimulate('TRIAL')}
+                className="p-2 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-500/30 text-amber-300 rounded-xl text-[10px] font-bold text-center transition-colors"
+                title="Simular cómo ve el cliente sus 15 días"
               >
-                <Key className="w-4 h-4" /> ACTIVAR SISTEMA AHORA
+                ⏳ Ver Modo Prueba
+              </button>
+              <button 
+                onClick={() => handleSimulate('EXPIRED')}
+                className="p-2 bg-red-950/40 hover:bg-red-900/50 border border-red-500/30 text-red-300 rounded-xl text-[10px] font-bold text-center transition-colors"
+                title="Simular bloqueo cuando expira"
+              >
+                🔒 Ver Bloqueado
+              </button>
+              <button 
+                onClick={() => handleSimulate('DEV')}
+                className="p-2 bg-purple-950/40 hover:bg-purple-900/50 border border-purple-500/30 text-purple-300 rounded-xl text-[10px] font-bold text-center transition-colors"
+                title="Volver a tu modo de uso libre"
+              >
+                👑 Mi Modo Libre
               </button>
             </div>
-          )}
+          </div>
 
           {/* CONTACTO CON JOSUE HERNANDEZ */}
-          <div className="p-4 rounded-2xl bg-nexus-950/80 border border-nexus-800 text-center space-y-2.5">
+          <div className="p-3 rounded-2xl bg-nexus-950/80 border border-nexus-800 text-center space-y-2">
             <p className="text-[11px] font-bold text-slate-300">
-              ¿Necesitas una licencia para tu negocio o renovar tu sistema?
+              Autor y Soporte Técnico:
             </p>
             <a 
               href="https://wa.me/529612765041?text=Hola%20Josue%2C%20deseo%20activar%20mi%20licencia%20de%20Nexus%20POS"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 active:scale-95 transition-all"
+              className="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white px-4 py-2 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 active:scale-95 transition-all"
             >
-              <Phone className="w-4 h-4" /> SOLICITAR LICENCIA POR WHATSAPP (961 276 5041)
+              <Phone className="w-4 h-4" /> WHATSAPP: 961 276 5041
             </a>
-            <div className="text-[10px] text-slate-500 font-bold pt-1">
-              Desarrollado y Distribuido por <span className="text-amber-400">Josue Hernandez</span> • Tuxtla Gutiérrez, Chiapas
+            <div className="text-[10px] text-slate-500 font-bold">
+              Josue Hernandez • Tuxtla Gutiérrez, Chiapas
             </div>
           </div>
         </div>

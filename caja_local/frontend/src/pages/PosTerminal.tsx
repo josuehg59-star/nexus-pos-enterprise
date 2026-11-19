@@ -1,3 +1,4 @@
+import { LicenseModal } from '../components/LicenseModal';
 import React, { useState, useEffect, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -77,7 +78,7 @@ const CartRow = React.memo(({ item, onUpdateQuantity, onRemove, onFocusSearch }:
       >
         <X className="w-6 h-6" />
       </button>
-    </div>
+          </div>
   );
 });
 
@@ -112,6 +113,7 @@ export default function PosTerminal() {
 
   
   const [scanInput, setScanInput] = useState('');
+  const [showLicenseModal, setShowLicenseModal] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [client, setClient] = useState<{ name: string; monedero: number; id?: number }>({ name: 'PUBLICO GENERAL', monedero: 0, id: 0 });
   const [paymentMethod, setPaymentMethod] = useState('EFECTIVO');
@@ -2012,6 +2014,7 @@ export default function PosTerminal() {
         </div>
       )}
 
+      <LicenseModal isOpen={showLicenseModal} onClose={() => setShowLicenseModal(false)} />
     </div>
   );
 }

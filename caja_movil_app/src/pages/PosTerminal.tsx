@@ -11,6 +11,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { usePosStore, lineTotal } from '../store/useStore';
 import { useSettings } from '../store/useSettings';
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
+import { LicenseModal } from '../components/LicenseModal';
 import { Camera } from 'lucide-react';
 import { db } from '../store/database';
 import { productIndex } from '../store/productIndex';
@@ -79,7 +80,7 @@ const CartRow = React.memo(({ item, onUpdateQuantity, onRemove, onFocusSearch }:
       >
         <X className="w-6 h-6" />
       </button>
-    </div>
+          </div>
   );
 });
 
@@ -115,6 +116,7 @@ export default function PosTerminal() {
   
   const [scanInput, setScanInput] = useState('');
   const [showCameraScanner, setShowCameraScanner] = useState(false);
+  const [showLicenseModal, setShowLicenseModal] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [client, setClient] = useState<{ name: string; monedero: number; id?: number }>({ name: 'PUBLICO GENERAL', monedero: 0, id: 0 });
   const [paymentMethod, setPaymentMethod] = useState('EFECTIVO');
@@ -2037,6 +2039,7 @@ export default function PosTerminal() {
         </div>
       )}
 
+      <LicenseModal isOpen={showLicenseModal} onClose={() => setShowLicenseModal(false)} />
     </div>
   );
 }

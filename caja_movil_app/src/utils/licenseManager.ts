@@ -14,6 +14,7 @@ export interface LicenseInfo {
   activatedAt?: string;
   licenseKey?: string;
   isJosueFreePC: boolean;
+  simulationMode?: boolean;
 }
 
 const STORAGE_KEY = 'nexus_pos_license_data';
@@ -32,6 +33,9 @@ function generateChecksum(val: string): string {
 
 function isJosueLocalPC(): boolean {
   try {
+    if (localStorage.getItem('nexus_license_simulation_mode') === 'true') {
+      return false;
+    }
     if (localStorage.getItem('nexus_josue_master_unlocked') === 'true') {
       return true;
     }
@@ -52,7 +56,8 @@ export function getLicenseInfo(): LicenseInfo {
       trialExpiresAt: '2099-12-31',
       activatedAt: '2026-01-01',
       licenseKey: 'NEXUS-JOSUE-DEV-UNLIMITED',
-      isJosueFreePC: true
+      isJosueFreePC: true,
+      simulationMode: false
     };
   }
 
@@ -70,7 +75,20 @@ export function getLicenseInfo(): LicenseInfo {
           trialExpiresAt: '2099-12-31',
           activatedAt: data.activatedAt,
           licenseKey: data.licenseKey,
-          isJosueFreePC: false
+          isJosueFreePC: false,
+          simulationMode: localStorage.getItem('nexus_license_simulation_mode') === 'true'
+        };
+      }
+
+      if (data.status === 'EXPIRED_BLOCKED') {
+        return {
+          status: 'EXPIRED_BLOCKED',
+          licenseType: 'CLIENTE_TRIAL',
+          holder: data.holder || 'LICENCIA EXPIRADA',
+          daysRemaining: 0,
+          trialExpiresAt: 'Vencida',
+          isJosueFreePC: false,
+          simulationMode: localStorage.getItem('nexus_license_simulation_mode') === 'true'
         };
       }
 
@@ -85,10 +103,11 @@ export function getLicenseInfo(): LicenseInfo {
           return {
             status: 'TRIAL_ACTIVE',
             licenseType: 'CLIENTE_TRIAL',
-            holder: 'PERIODO DE PRUEBA (CLIENTE)',
+            holder: data.holder || 'PERIODO DE PRUEBA (CLIENTE)',
             daysRemaining: daysLeft,
             trialExpiresAt: expDate.toLocaleDateString('es-MX'),
-            isJosueFreePC: false
+            isJosueFreePC: false,
+            simulationMode: localStorage.getItem('nexus_license_simulation_mode') === 'true'
           };
         } else {
           return {
@@ -97,7 +116,8 @@ export function getLicenseInfo(): LicenseInfo {
             holder: 'LICENCIA VENCIDA',
             daysRemaining: 0,
             trialExpiresAt: new Date(firstLaunchTime + (TRIAL_DAYS * 24 * 60 * 60 * 1000)).toLocaleDateString('es-MX'),
-            isJosueFreePC: false
+            isJosueFreePC: false,
+            simulationMode: localStorage.getItem('nexus_license_simulation_mode') === 'true'
           };
         }
       }
@@ -118,7 +138,8 @@ export function getLicenseInfo(): LicenseInfo {
       holder: 'PERIODO DE PRUEBA (CLIENTE)',
       daysRemaining: TRIAL_DAYS,
       trialExpiresAt: expDate.toLocaleDateString('es-MX'),
-      isJosueFreePC: false
+      isJosueFreePC: false,
+      simulationMode: localStorage.getItem('nexus_license_simulation_mode') === 'true'
     };
   } catch (e) {
     return {
@@ -142,11 +163,12 @@ export function activateLicense(keyOrPin: string, clientName?: string): { succes
       licenseKey: `NEXUS-MASTER-${cleanInput}`,
       activatedAt: new Date().toLocaleDateString('es-MX')
     };
+    localStorage.removeItem('nexus_license_simulation_mode');
     localStorage.setItem(STORAGE_KEY, JSON.stringify(activationData));
     localStorage.setItem('nexus_josue_master_unlocked', 'true');
     return {
       success: true,
-      message: '✅ ¡Licencia Permanente Activada con Éxito mediante Autorización de Josue Hernandez!'
+      message: '✅ ¡Licencia Permanente Activada con Éxito mediante PIN de Josue Hernandez!'
     };
   }
 
@@ -157,10 +179,11 @@ export function activateLicense(keyOrPin: string, clientName?: string): { succes
       licenseKey: cleanInput,
       activatedAt: new Date().toLocaleDateString('es-MX')
     };
+    localStorage.removeItem('nexus_license_simulation_mode');
     localStorage.setItem(STORAGE_KEY, JSON.stringify(activationData));
     return {
       success: true,
-      message: '✅ ¡Clave de Licencia NEXUS POS Aceptada y Activada Exitosamente!'
+      message: '✅ ¡Clave Oficial NEXUS POS Aceptada y Activada Exitosamente!'
     };
   }
 
@@ -168,4 +191,30 @@ export function activateLicense(keyOrPin: string, clientName?: string): { succes
     success: false,
     message: '❌ Clave o PIN inválido. Contacta a Josue Hernandez (Tel: 961 276 5041) para obtener tu activación.'
   };
+}
+
+export function simulateLicenseStatus(mode: 'TRIAL' | 'EXPIRED' | 'DEV'): LicenseInfo {
+  if (mode === 'TRIAL') {
+    localStorage.setItem('nexus_license_simulation_mode', 'true');
+    localStorage.removeItem('nexus_josue_master_unlocked');
+    const fiveDaysAgo = new Date(Date.now() - (5 * 24 * 60 * 60 * 1000)).toISOString();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      firstLaunch: fiveDaysAgo,
+      checksum: generateChecksum(fiveDaysAgo),
+      status: 'TRIAL_ACTIVE',
+      holder: 'CLIENTE EN PRUEBA (SIMULACIÓN)'
+    }));
+  } else if (mode === 'EXPIRED') {
+    localStorage.setItem('nexus_license_simulation_mode', 'true');
+    localStorage.removeItem('nexus_josue_master_unlocked');
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      status: 'EXPIRED_BLOCKED',
+      holder: 'CLIENTE EXPIRADO (SIMULACIÓN)'
+    }));
+  } else {
+    localStorage.removeItem('nexus_license_simulation_mode');
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.setItem('nexus_josue_master_unlocked', 'true');
+  }
+  return getLicenseInfo();
 }
