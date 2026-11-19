@@ -839,15 +839,20 @@ export default function PosTerminal() {
         }
         if (showTicketModal) {
           e.preventDefault();
-          printTicket();
-          setTimeout(() => {
-            setShowTicketModal(false);
-            focusSearchInput();
-          }, 600);
+          // Enter finaliza y pasa directamente a la Nueva Venta (la impresión es opcional)
+          setShowTicketModal(false);
+          focusSearchInput();
           return;
         } else if (isProcessing) {
           e.preventDefault();
           finalizeSaleWithMethod(paymentMethod);
+        }
+      }
+      if (e.key === 'p' || e.key === 'P' || e.key === 'F2') {
+        if (showTicketModal) {
+          e.preventDefault();
+          printTicket();
+          return;
         }
       }
       if (e.key === 'Escape') {
@@ -1538,14 +1543,14 @@ export default function PosTerminal() {
             {/* ACCIONES DEL TICKET */}
             <div className="flex gap-3 mb-6">
               <button onClick={sendWhatsapp} className="flex-1 bg-[#10b981] hover:bg-[#059669] text-white py-3 rounded-xl font-black text-xs uppercase flex justify-center items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"> <Smartphone className="w-4 h-4" /> PDF / WHATSAPP </button>
-              <button onClick={printTicket} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-600/20 transition-colors flex items-center justify-center gap-2"> <Printer className="w-4 h-4" /> IMPRIMIR (TÉRMICA) </button>
+              <button onClick={printTicket} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-600/20 transition-colors flex items-center justify-center gap-2"> <Printer className="w-4 h-4" /> IMPRIMIR TICKET [P / F2] </button>
             </div>
             <div className="flex gap-4 mt-auto">
               <button 
                 onClick={handleCloseTicketModal}
                 className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-black text-sm uppercase transition-colors shadow-lg shadow-blue-600/20"
               >
-                NUEVA VENTA (ENTER)
+                NUEVA VENTA [ENTER]
               </button>
               <button 
                 onClick={handleCloseTicketModal}

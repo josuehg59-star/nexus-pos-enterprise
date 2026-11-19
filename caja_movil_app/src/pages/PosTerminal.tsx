@@ -26,65 +26,61 @@ interface CartRowProps {
 
 const CartRow = React.memo(({ item, onUpdateQuantity, onRemove, onFocusSearch }: CartRowProps) => {
   return (
-    <div className="bg-nexus-900 border border-nexus-800 p-4 rounded-2xl flex items-center gap-4 hover:border-nexus-700 transition-colors shadow-sm group">
-      <div className="flex items-center justify-center gap-1.5 bg-nexus-900 border border-nexus-700 rounded-xl p-1 shrink-0">
+    <div className="bg-nexus-900/90 border border-nexus-800 p-2 sm:p-3 rounded-2xl flex items-center justify-between gap-2 hover:border-nexus-700 transition-colors shadow-sm">
+      <div className="flex-1 min-w-0 pr-1">
+        <h3 className="font-bold text-white text-xs sm:text-sm truncate leading-tight">{item.name}</h3>
+        <p className="text-[11px] font-bold text-slate-400 font-mono mt-0.5">
+          ${item.price?.toFixed(2)} c/u
+        </p>
+      </div>
+
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        {/* Controles de cantidad */}
+        <div className="flex items-center gap-1 bg-[#070d18] border border-nexus-700 rounded-xl p-0.5">
+          <button 
+            onClick={(e) => { e.stopPropagation(); onUpdateQuantity(item.id!, item.cartQty - 1); }} 
+            className="w-8 h-8 flex items-center justify-center bg-red-500/10 text-red-400 hover:bg-red-500/20 active:scale-95 rounded-lg transition-colors font-black text-lg"
+          >
+            -
+          </button>
+          <input
+            type="number"
+            value={item.cartQty === 0 ? '' : item.cartQty}
+            onChange={(e) => {
+              const val = parseInt(e.target.value, 10);
+              onUpdateQuantity(item.id!, isNaN(val) ? 0 : Math.max(0, val));
+            }}
+            onClick={(e) => (e.target as HTMLInputElement).select()}
+            className="w-9 sm:w-11 bg-transparent text-center font-black text-sm sm:text-base text-emerald-400 focus:outline-none font-mono"
+          />
+          <button 
+            onClick={(e) => { e.stopPropagation(); onUpdateQuantity(item.id!, item.cartQty + 1); }} 
+            className="w-8 h-8 flex items-center justify-center bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 active:scale-95 rounded-lg transition-colors font-black text-lg"
+          >
+            +
+          </button>
+        </div>
+
+        {/* Subtotal */}
+        <div className="text-right min-w-[60px] sm:min-w-[75px]">
+          <p className="font-black text-white text-sm sm:text-base font-mono">${lineTotal(item).toFixed(2)}</p>
+        </div>
+
+        {/* Boton eliminar siempre visible en touch */}
         <button 
-          onClick={(e) => { e.stopPropagation(); onUpdateQuantity(item.id!, item.cartQty - 1); onFocusSearch(); }} 
-          className="w-10 h-10 flex items-center justify-center bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors font-black text-xl"
-          title="Restar 1 pieza"
+          onClick={() => onRemove(item.id!)}
+          className="w-8 h-8 bg-red-500/10 text-red-400 hover:bg-red-500/20 active:scale-95 rounded-xl flex items-center justify-center transition-colors shrink-0"
+          title="Eliminar producto"
         >
-          -
-        </button>
-        <input
-          type="number"
-          value={item.cartQty === 0 ? '' : item.cartQty}
-          onChange={(e) => {
-            const val = parseInt(e.target.value, 10);
-            onUpdateQuantity(item.id!, isNaN(val) ? 0 : Math.max(0, val));
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              onFocusSearch();
-            }
-          }}
-          onBlur={() => {
-            if (item.cartQty <= 0) {
-              onRemove(item.id!);
-            }
-            onFocusSearch();
-          }}
-          onClick={(e) => (e.target as HTMLInputElement).select()}
-          className="w-16 border-2 border-emerald-500/60 text-center font-black text-xl rounded-lg py-1 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400 shadow-inner font-mono cursor-text"
-          style={{ backgroundColor: '#020617', color: '#34d399', opacity: 1 }}
-          title="Escribe la cantidad directamente (Ej: 100)"
-        />
-        <button 
-          onClick={(e) => { e.stopPropagation(); onUpdateQuantity(item.id!, item.cartQty + 1); onFocusSearch(); }} 
-          className="w-10 h-10 flex items-center justify-center bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 rounded-lg transition-colors font-black text-xl"
-          title="Sumar 1 pieza"
-        >
-          +
+          <X className="w-4 h-4" />
         </button>
       </div>
-      <div className="flex-1">
-        <h3 className="font-bold text-white text-lg">{item.name}</h3>
-        <p className="text-sm font-bold text-slate-500 font-mono">{item.sku} • ${item.price.toFixed(2)} c/u</p>
-      </div>
-      <div className="text-right mr-4">
-        <p className="font-black text-white text-2xl">${lineTotal(item).toFixed(2)}</p>
-      </div>
-      <button 
-        onClick={() => { onRemove(item.id!); onFocusSearch(); }}
-        className="w-12 h-12 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
-      >
-        <X className="w-6 h-6" />
-      </button>
-          </div>
+    </div>
   );
 });
 
 export default function PosTerminal() {
+  const [showMobileCheckoutModal, setShowMobileCheckoutModal] = useState(false);
   const { nombreNegocio, rfc, eslogan, telefono, direccion, mercadoPagoToken, mercadoPagoDeviceId, servidorIp, clipApiKey, clipSecretKey, clipSerialNumber, clipModo, logo, cajaNombre, activeUser, usersList, requirePasswordLogin, setSettings } = useSettings();
   const searchInputRef = useRef<HTMLInputElement>(null);
   
@@ -842,15 +838,20 @@ export default function PosTerminal() {
         }
         if (showTicketModal) {
           e.preventDefault();
-          printTicket();
-          setTimeout(() => {
-            setShowTicketModal(false);
-            focusSearchInput();
-          }, 600);
+          // Enter finaliza y pasa directamente a la Nueva Venta (la impresión es opcional)
+          setShowTicketModal(false);
+          focusSearchInput();
           return;
         } else if (isProcessing) {
           e.preventDefault();
           finalizeSaleWithMethod(paymentMethod);
+        }
+      }
+      if (e.key === 'p' || e.key === 'P' || e.key === 'F2') {
+        if (showTicketModal) {
+          e.preventDefault();
+          printTicket();
+          return;
         }
       }
       if (e.key === 'Escape') {
@@ -1563,14 +1564,14 @@ export default function PosTerminal() {
             {/* ACCIONES DEL TICKET */}
             <div className="flex gap-3 mb-6">
               <button onClick={sendWhatsapp} className="flex-1 bg-[#10b981] hover:bg-[#059669] text-white py-3 rounded-xl font-black text-xs uppercase flex justify-center items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"> <Smartphone className="w-4 h-4" /> PDF / WHATSAPP </button>
-              <button onClick={printTicket} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-600/20 transition-colors flex items-center justify-center gap-2"> <Printer className="w-4 h-4" /> IMPRIMIR (TÉRMICA) </button>
+              <button onClick={printTicket} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-600/20 transition-colors flex items-center justify-center gap-2"> <Printer className="w-4 h-4" /> IMPRIMIR TICKET [P / F2] </button>
             </div>
             <div className="flex gap-4 mt-auto">
               <button 
                 onClick={handleCloseTicketModal}
                 className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-black text-sm uppercase transition-colors shadow-lg shadow-blue-600/20"
               >
-                NUEVA VENTA (ENTER)
+                NUEVA VENTA [ENTER]
               </button>
               <button 
                 onClick={handleCloseTicketModal}

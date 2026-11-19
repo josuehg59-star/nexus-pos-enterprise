@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Key, Lock, Phone, CheckCircle, AlertTriangle, X, RefreshCw, Sparkles } from 'lucide-react';
+import { ShieldCheck, Key, Lock, Phone, CheckCircle, AlertTriangle, X, RefreshCw, Sparkles, Trash2 } from 'lucide-react';
 import { getLicenseInfo, activateLicense, simulateLicenseStatus, type LicenseInfo } from '../utils/licenseManager';
+import { cleanSystemForDelivery } from '../utils/systemCleaner';
 
 interface LicenseModalProps {
   isOpen: boolean;
@@ -52,6 +53,18 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ isOpen, onClose, onA
       ok: true 
     });
     if (onActivated) onActivated();
+  };
+
+  const handleCleanDelivery = async (preserveCatalog: boolean) => {
+    const confirmText = preserveCatalog
+      ? '¿Limpiar ventas, turnos y cortes de prueba para entregar al cliente?\n\n✅ Se CONSERVARÁ el catálogo de productos.\n✅ El cliente iniciará con sus 15 días de prueba limpios.'
+      : '⚠️ ATENCIÓN: ¿Restablecer TODO de fábrica?\n\n❌ Se borrarán productos, clientes y ventas.\n❌ El sistema quedará 100% vacío.';
+
+    if (window.confirm(confirmText)) {
+      const res = await cleanSystemForDelivery({ preserveCatalog, resetLicenseForNewCustomer: true });
+      alert(res.message);
+      window.location.reload();
+    }
   };
 
   const isBlocked = license.status === 'EXPIRED_BLOCKED';
@@ -160,6 +173,34 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ isOpen, onClose, onA
             >
               <Key className="w-4 h-4" /> ACTIVAR LICENCIA PERMANENTE
             </button>
+          </div>
+
+          {/* HERRAMIENTAS DE ENTREGA Y LIMPIEZA */}
+          <div className="p-3 bg-[#070d18] rounded-2xl border border-nexus-800 space-y-2.5">
+            <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider block text-center">
+              🧹 LIMPIAR Y PREPARAR PARA ENTREGAR AL CLIENTE:
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleCleanDelivery(true)}
+                className="p-2.5 bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-300 rounded-xl text-[10px] font-black text-center transition-colors flex items-center justify-center gap-1.5"
+                title="Limpia ventas y cortes pero deja los productos para el cliente"
+              >
+                <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                <span>Limpiar Ventas (Conserva Productos)</span>
+              </button>
+              <button
+                onClick={() => handleCleanDelivery(false)}
+                className="p-2.5 bg-red-950/50 hover:bg-red-900/60 border border-red-500/40 text-red-300 rounded-xl text-[10px] font-black text-center transition-colors flex items-center justify-center gap-1.5"
+                title="Borra absolutamente todo dejándolo como de fábrica"
+              >
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>Restablecer Fábrica (100% Vacío)</span>
+              </button>
+            </div>
+            <p className="text-[9px] text-slate-400 text-center font-bold">
+              💡 Reinicia el periodo de prueba de 15 días y folios para que el cliente estrene su sistema limpio.
+            </p>
           </div>
 
           {/* BOTONES DE SIMULACIÓN PARA JOSUÉ */}
