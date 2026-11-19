@@ -29,6 +29,7 @@ import ImpresionEtiquetas from './pages/ImpresionEtiquetas';
 import LiquidacionProveedor from './pages/LiquidacionProveedor';
 import { useSettings } from './store/useSettings';
 import { LicenseModal } from './components/LicenseModal';
+import { AutoUpdater } from './components/AutoUpdater';
 import { getLicenseInfo } from './utils/licenseManager';
 
 interface ErrorBoundaryProps {
@@ -359,6 +360,7 @@ export function App() {
       </main>
 
       <LicenseModal isOpen={showLicenseModal || licenseInfo.status === 'EXPIRED_BLOCKED'} onClose={() => setShowLicenseModal(false)} onActivated={() => setLicenseInfo(getLicenseInfo())} />
+      <AutoUpdater mode="mobile" />
     </div>
   );
 }

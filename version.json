@@ -1,0 +1,19 @@
+{
+  "version": "2.0.1",
+  "name": "NEXUS POS ENTERPRISE",
+  "releaseDate": "2026-11-19",
+  "notes": "Corrección de escaneo 1 pieza (antiduplicados), eliminación de productos fantasmas, acople 100% responsivo a pantalla de celular y botón para subir/cambiar logotipo.",
+  "creator": {
+    "name": "JOSUE HERNANDEZ GUTIERREZ",
+    "phone": "9612765041",
+    "location": "Tuxtla Gutiérrez, Chiapas"
+  },
+  "pc": {
+    "version": "2.0.1",
+    "downloadUrl": "https://github.com/josuehg59-star/nexus-pos-enterprise/releases/latest/download/NEXUS_POS_ENTERPRISE_INSTALADOR_PC.exe"
+  },
+  "mobile": {
+    "version": "2.0.1",
+    "downloadUrl": "https://github.com/josuehg59-star/nexus-pos-enterprise/releases/latest/download/NEXUS_POS_MOVIL.apk"
+  }
+}

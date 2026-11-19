@@ -68,6 +68,7 @@ const modules = [
 
 import { useSettings } from './store/useSettings';
 import { LicenseModal } from './components/LicenseModal';
+import { AutoUpdater } from './components/AutoUpdater';
 import { getLicenseInfo } from './utils/licenseManager';
 
 function App() {
@@ -326,6 +327,7 @@ function App() {
         {renderContent()}
       </main>
       <LicenseModal isOpen={showLicenseModal || licenseInfo.status === 'EXPIRED_BLOCKED'} onClose={() => setShowLicenseModal(false)} onActivated={() => setLicenseInfo(getLicenseInfo())} />
+      <AutoUpdater mode="pc" />
     </div>
   );
 }
