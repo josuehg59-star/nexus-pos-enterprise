@@ -113,6 +113,7 @@ export default function PosTerminal() {
 
   
   const [scanInput, setScanInput] = useState('');
+  const lastScanRef = useRef<{ code: string; time: number }>({ code: '', time: 0 });
   const [showLicenseModal, setShowLicenseModal] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [client, setClient] = useState<{ name: string; monedero: number; id?: number }>({ name: 'PUBLICO GENERAL', monedero: 0, id: 0 });
@@ -301,6 +302,14 @@ export default function PosTerminal() {
     const val = rawVal.trim();
     if (!val) return;
 
+    // Protección anti-duplicado (evita que un mismo escaneo agregue 2 piezas por disparos múltiples en < 600ms)
+    const now = Date.now();
+    if (lastScanRef.current.code.toLowerCase() === val.toLowerCase() && (now - lastScanRef.current.time) < 600) {
+      return;
+    }
+    lastScanRef.current = { code: val, time: now };
+    scannerBufferRef.current = '';
+
     // 1. Escaneo de monedero de cliente
     const clientMatch = await db.clients.where('monederoCode').equals(val).first();
     if (clientMatch) {
@@ -327,15 +336,11 @@ export default function PosTerminal() {
       ).first();
     }
 
-    // 4. Solo si NO es un código de barras numérico y el usuario buscó por nombre (ej: "aceite")
-    if (!p && !/^\d{6,}$/.test(val) && suggestions.length > 0) {
+    // 4. Búsqueda por texto SOLO si NO es un código numérico o código de barras
+    // (Previene que un código de barras no encontrado agregue productos fantasmas por coincidencia difusa)
+    const isBarcodeLike = /^\d{5,}$/.test(val);
+    if (!p && !isBarcodeLike && suggestions.length > 0) {
       p = suggestions[0];
-    }
-
-    // 5. Búsqueda ponderada en memoria solo si no es código de barras
-    if (!p && !/^\d{6,}$/.test(val)) {
-      const matches = productIndex.search(val, 1);
-      if (matches.length > 0) p = matches[0];
     }
 
     if (p) {
@@ -349,17 +354,19 @@ export default function PosTerminal() {
       setScanErrorMsg(`Código no encontrado: ${val}`);
       setTimeout(() => setScanErrorMsg(''), 3000);
       setScanInput('');
+      setSuggestions([]);
       focusSearchInput();
     }
   };
 
-    const handleScanInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleScanInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
     // Si el escáner envió un salto de línea (sufijo Enter de escáner USB/Bluetooth)
     if (raw.includes('\n') || raw.includes('\r')) {
       const clean = raw.replace(/[\r\n]/g, '').trim();
       setScanInput('');
       setSuggestions([]);
+      scannerBufferRef.current = '';
       if (clean) {
         processBarcodeOrSearch(clean);
       }
@@ -367,25 +374,15 @@ export default function PosTerminal() {
     }
 
     setScanInput(raw);
-
-    const trimmed = raw.trim();
-    // Auto-detección inmediata: si es código de barras numérico (>= 7 dígitos) y coincide exactamente
-    if (/^\d{7,14}$/.test(trimmed)) {
-      const exactProduct = productIndex.findByBarcode(trimmed);
-      if (exactProduct) {
-        playBeepSuccess();
-        addToCart(exactProduct);
-        setScanInput('');
-        setSuggestions([]);
-        return;
-      }
-    }
   };
 
   const handleScan = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if ((e.key === 'Enter' || e.keyCode === 13 || e.which === 13) && scanInput.trim() !== '') {
       e.preventDefault();
-      await processBarcodeOrSearch(scanInput);
+      e.stopPropagation();
+      scannerBufferRef.current = '';
+      const toSearch = scanInput.trim();
+      await processBarcodeOrSearch(toSearch);
     }
   };
 
@@ -409,9 +406,11 @@ export default function PosTerminal() {
         return;
       }
 
-      // Si el foco está en un input de cantidad o cliente, no interceptar
+      // Si el foco está en la barra de búsqueda o cualquier input/textarea,
+      // el propio componente maneja el Enter y la entrada, evitando duplicación
       const activeEl = document.activeElement;
-      if (activeEl && activeEl !== searchInputRef.current && ['INPUT', 'TEXTAREA'].includes(activeEl.tagName)) {
+      if (activeEl && ['INPUT', 'TEXTAREA'].includes(activeEl.tagName)) {
+        scannerBufferRef.current = '';
         return;
       }
 

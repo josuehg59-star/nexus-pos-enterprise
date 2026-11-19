@@ -790,8 +790,8 @@ export default function Config() {
               </div>
 
               {/* LOGO BOX */}
-              <div className="w-40 shrink-0 flex flex-col items-center">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">LOGOTIPO TICKET</label>
+              <div className="w-44 shrink-0 flex flex-col items-center p-3 bg-nexus-950/80 rounded-2xl border border-nexus-700">
+                <label className="text-[10px] font-black text-amber-400 uppercase tracking-widest block mb-2 text-center">LOGOTIPO TICKET</label>
                 <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
                 <div 
                   onClick={() => logoInputRef.current?.click()}
@@ -806,7 +806,28 @@ export default function Config() {
                     <span className="text-white text-xs font-bold uppercase tracking-widest">CAMBIAR</span>
                   </div>
                 </div>
-                <button onClick={removeLogo} className="text-red-500 text-[10px] font-black hover:text-red-400 uppercase tracking-widest">QUITAR</button>
+
+                <div className="flex flex-col gap-2 w-full mt-1">
+                  <button 
+                    type="button" 
+                    onClick={() => logoInputRef.current?.click()}
+                    className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/30 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <span>📷</span> <span>{localSettings.logo ? 'CAMBIAR LOGO' : 'SUBIR LOGO'}</span>
+                  </button>
+                  {localSettings.logo && (
+                    <button 
+                      type="button" 
+                      onClick={removeLogo} 
+                      className="w-full py-1.5 px-3 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 rounded-xl font-black text-[10px] uppercase tracking-wider transition-colors active:scale-95 cursor-pointer"
+                    >
+                      QUITAR LOGO
+                    </button>
+                  )}
+                  {logoMsg && (
+                    <span className="text-[10px] text-emerald-400 font-bold text-center">{logoMsg}</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>

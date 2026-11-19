@@ -218,14 +218,12 @@ export function App() {
       {isMenuOpen && (
         <div 
           onClick={closeMenu}
-          className="fixed inset-0 bg-black/75 z-40 lg:hidden backdrop-blur-sm"
+          className="fixed inset-0 bg-black/75 z-40 backdrop-blur-sm"
         />
       )}
 
       {/* SIDEBAR COMPLETO (DESLIZABLE EN MÓVIL / FIJO EN TABLET GRANDE O PC) */}
-      <aside className={`fixed lg:static top-0 bottom-0 left-0 bg-nexus-900 border-r border-nexus-800 flex flex-col shadow-2xl z-50 transition-all duration-300 ease-in-out w-[270px] sm:w-[290px] ${
-        isMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      }`}>
+      <aside className={`fixed top-0 bottom-0 left-0 bg-nexus-900 border-r border-nexus-800 flex flex-col shadow-2xl z-50 transition-all duration-300 ease-in-out w-[270px] sm:w-[290px] ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="h-16 flex items-center justify-between px-5 border-b border-nexus-800 shrink-0">
           <div className="flex items-center">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center mr-3 shadow-lg shadow-emerald-500/20">
@@ -241,7 +239,7 @@ export function App() {
           </div>
           <button 
             onClick={closeMenu}
-            className="lg:hidden p-1 text-slate-400 hover:text-white"
+            className="p-1 text-slate-400 hover:text-white"
           >
             <X className="w-5 h-5" />
           </button>
@@ -353,7 +351,7 @@ export function App() {
             </button>
           </header>
         )}
-        <div className="flex-1 overflow-auto w-full">
+        <div className="flex-1 flex flex-col h-full w-full overflow-hidden">
           <ErrorBoundary onReset={() => selectModule('operacion', 'Terminal POS')}>
             {renderContent()}
           </ErrorBoundary>

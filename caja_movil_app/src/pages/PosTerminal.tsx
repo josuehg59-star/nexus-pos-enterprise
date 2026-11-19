@@ -108,6 +108,7 @@ export default function PosTerminal() {
 
   
   const [scanInput, setScanInput] = useState('');
+  const lastScanRef = useRef<{ code: string; time: number }>({ code: '', time: 0 });
   const [showCameraScanner, setShowCameraScanner] = useState(false);
   const [showLicenseModal, setShowLicenseModal] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -297,6 +298,14 @@ export default function PosTerminal() {
     const val = rawVal.trim();
     if (!val) return;
 
+    // Protección anti-duplicado (evita que un mismo escaneo agregue 2 piezas por disparos múltiples en < 600ms)
+    const now = Date.now();
+    if (lastScanRef.current.code.toLowerCase() === val.toLowerCase() && (now - lastScanRef.current.time) < 600) {
+      return;
+    }
+    lastScanRef.current = { code: val, time: now };
+    scannerBufferRef.current = '';
+
     // 1. Escaneo de monedero de cliente
     const clientMatch = await db.clients.where('monederoCode').equals(val).first();
     if (clientMatch) {
@@ -323,15 +332,11 @@ export default function PosTerminal() {
       ).first();
     }
 
-    // 4. Solo si NO es un código de barras numérico y el usuario buscó por nombre (ej: "aceite")
-    if (!p && !/^\d{6,}$/.test(val) && suggestions.length > 0) {
+    // 4. Búsqueda por texto SOLO si NO es un código numérico o código de barras
+    // (Previene que un código de barras no encontrado agregue productos fantasmas por coincidencia difusa)
+    const isBarcodeLike = /^\d{5,}$/.test(val);
+    if (!p && !isBarcodeLike && suggestions.length > 0) {
       p = suggestions[0];
-    }
-
-    // 5. Búsqueda ponderada en memoria solo si no es código de barras
-    if (!p && !/^\d{6,}$/.test(val)) {
-      const matches = productIndex.search(val, 1);
-      if (matches.length > 0) p = matches[0];
     }
 
     if (p) {
@@ -345,17 +350,19 @@ export default function PosTerminal() {
       setScanErrorMsg(`Código no encontrado: ${val}`);
       setTimeout(() => setScanErrorMsg(''), 3000);
       setScanInput('');
+      setSuggestions([]);
       focusSearchInput();
     }
   };
 
-    const handleScanInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleScanInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
     // Si el escáner envió un salto de línea (sufijo Enter de escáner USB/Bluetooth)
     if (raw.includes('\n') || raw.includes('\r')) {
       const clean = raw.replace(/[\r\n]/g, '').trim();
       setScanInput('');
       setSuggestions([]);
+      scannerBufferRef.current = '';
       if (clean) {
         processBarcodeOrSearch(clean);
       }
@@ -363,25 +370,15 @@ export default function PosTerminal() {
     }
 
     setScanInput(raw);
-
-    const trimmed = raw.trim();
-    // Auto-detección inmediata: si es código de barras numérico (>= 7 dígitos) y coincide exactamente
-    if (/^\d{7,14}$/.test(trimmed)) {
-      const exactProduct = productIndex.findByBarcode(trimmed);
-      if (exactProduct) {
-        playBeepSuccess();
-        addToCart(exactProduct);
-        setScanInput('');
-        setSuggestions([]);
-        return;
-      }
-    }
   };
 
   const handleScan = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if ((e.key === 'Enter' || e.keyCode === 13 || e.which === 13) && scanInput.trim() !== '') {
       e.preventDefault();
-      await processBarcodeOrSearch(scanInput);
+      e.stopPropagation();
+      scannerBufferRef.current = '';
+      const toSearch = scanInput.trim();
+      await processBarcodeOrSearch(toSearch);
     }
   };
 
@@ -405,9 +402,11 @@ export default function PosTerminal() {
         return;
       }
 
-      // Si el foco está en un input de cantidad o cliente, no interceptar
+      // Si el foco está en la barra de búsqueda o cualquier input/textarea,
+      // el propio componente maneja el Enter y la entrada, evitando duplicación
       const activeEl = document.activeElement;
-      if (activeEl && activeEl !== searchInputRef.current && ['INPUT', 'TEXTAREA'].includes(activeEl.tagName)) {
+      if (activeEl && ['INPUT', 'TEXTAREA'].includes(activeEl.tagName)) {
+        scannerBufferRef.current = '';
         return;
       }
 
@@ -1032,17 +1031,17 @@ export default function PosTerminal() {
         </div>
       </div>
 
-      {/* 3. CUERPO PRINCIPAL RESPONSIVO */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden w-full relative">
+      {/* 3. CUERPO PRINCIPAL 100% PANTALLA COMPLETA MÓVIL */}
+      <div className="flex-1 flex flex-col overflow-hidden w-full h-full relative">
         
-        {/* CARRITO DE COMPRAS */}
-        <div className="flex-1 flex flex-col relative overflow-hidden w-full">
-          <div className="flex-1 p-2 sm:p-4 overflow-y-auto custom-scrollbar bg-slate-900/40 pb-28 lg:pb-4">
+        {/* CARRITO DE COMPRAS 100% ANCHO Y ALTO */}
+        <div className="flex-1 flex flex-col relative overflow-hidden w-full h-full">
+          <div className="flex-1 p-2 sm:p-3 overflow-y-auto custom-scrollbar bg-slate-900/40 pb-28">
             {cart.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center opacity-40 p-4 text-center">
-                <ShoppingCart className="w-16 h-16 sm:w-24 sm:h-24 mb-4 text-emerald-400/60" />
-                <h2 className="text-lg sm:text-2xl font-black tracking-widest text-white uppercase">CARRITO VACÍO</h2>
-                <p className="text-xs sm:text-sm font-bold text-slate-400 max-w-xs mt-1">
+                <ShoppingCart className="w-16 h-16 sm:w-20 sm:h-20 mb-3 text-emerald-400/60" />
+                <h2 className="text-base sm:text-xl font-black tracking-widest text-white uppercase">CARRITO VACÍO</h2>
+                <p className="text-xs font-bold text-slate-400 max-w-xs mt-1">
                   Usa la cámara [📷] o escribe en el buscador para agregar productos.
                 </p>
               </div>
@@ -1060,22 +1059,10 @@ export default function PosTerminal() {
               </div>
             )}
           </div>
-
-          {/* BARRA DE ATAJOS SOLO EN PANTALLAS GRANDES (OCULTA EN CELULAR) */}
-          <div className="h-10 bg-nexus-900 border-t border-nexus-800 shrink-0 hidden lg:flex items-center px-4 gap-4 text-[10px] font-black text-slate-500 tracking-widest">
-            <kbd className="bg-nexus-800 px-2 py-1 rounded">F1</kbd> Buscar
-            <div className="w-px h-4 bg-nexus-700 mx-2"></div>
-            <span>EFE [F6]</span>
-            <span>TAR [F7]</span>
-            <span>TRANS [F8]</span>
-            <span>CRÉD [F9]</span>
-            <span>MP [F10]</span>
-            <span className="text-fuchsia-400">MON [F11]</span>
-          </div>
         </div>
 
-        {/* 4. BARRA FIJA INFERIOR EN CELULAR (CHECKOUT DOCK) */}
-        <div className="lg:hidden absolute bottom-0 left-0 right-0 bg-nexus-900/98 border-t-2 border-emerald-500/40 p-3 shadow-[0_-10px_30px_rgba(0,0,0,0.6)] z-20">
+        {/* 4. BARRA FIJA INFERIOR SIEMPRE VISIBLE EN CELULAR (CHECKOUT DOCK) */}
+        <div className="absolute bottom-0 left-0 right-0 bg-nexus-900/98 border-t-2 border-emerald-500/40 p-3 shadow-[0_-10px_30px_rgba(0,0,0,0.6)] z-20">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
               {cart.reduce((sum, item) => sum + item.cartQty, 0)} {cart.reduce((sum, item) => sum + item.cartQty, 0) === 1 ? 'artículo' : 'artículos'}
@@ -1096,7 +1083,7 @@ export default function PosTerminal() {
             disabled={cart.length === 0}
             className={`w-full py-3.5 rounded-xl text-white font-black text-base uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${
               cart.length > 0 
-                ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-emerald-600/30' 
+                ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-emerald-600/30 cursor-pointer' 
                 : 'bg-slate-800 text-slate-500 border border-slate-700 opacity-60'
             }`}
           >
@@ -1105,92 +1092,6 @@ export default function PosTerminal() {
           </button>
         </div>
 
-        {/* 5. PANEL LATERAL DE TOTALES Y PAGOS (SOLO EN TABLET/PC - LG) */}
-        <div className="hidden lg:flex w-[360px] bg-nexus-900 flex-col shrink-0 z-10 overflow-y-auto custom-scrollbar pb-4 border-l border-nexus-800">
-          <div className="p-6 text-center border-b border-nexus-800 bg-nexus-900/80">
-            <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Total a Pagar</h3>
-            <p className="text-6xl font-black text-white tracking-tighter">${total.toFixed(2)}</p>
-            {total > 0 && (
-              <p className="text-[10px] text-fuchsia-400 font-bold mt-2 bg-fuchsia-500/10 inline-block px-3 py-1 rounded-full border border-fuchsia-500/20">
-                + ${(abonoMonedero).toFixed(2)} se abonarán al monedero
-              </p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-6 gap-2 p-4 border-b border-nexus-800">
-            {[20, 50, 100, 200, 500, 1000].map(val => (
-              <button 
-                key={val} 
-                onClick={() => setMontoRecibido(val.toString())}
-                className="bg-nexus-800 hover:bg-nexus-700 border border-nexus-700 rounded-lg py-2 text-xs font-bold text-slate-300 transition-colors"
-              >
-                ${val}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex gap-4 p-4 border-b border-nexus-800">
-            <div className="flex-1">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Monto Recibido</label>
-              <input 
-                type="number" 
-                value={montoRecibido}
-                onChange={(e) => setMontoRecibido(e.target.value)}
-                className="w-full bg-nexus-800 border border-nexus-700 text-white px-4 py-3 rounded-xl font-black text-xl text-center focus:outline-none focus:border-nexus-accent"
-                placeholder="$0.00"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Su Cambio</label>
-              <div className="w-full bg-[#0b1120] border border-nexus-800 text-emerald-400 px-4 py-3 rounded-xl font-black text-xl text-center">
-                ${cambio > 0 ? cambio.toFixed(2) : '0.00'}
-              </div>
-            </div>
-          </div>
-
-          <div className="p-4 border-b border-nexus-800">
-            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Método de Pago</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {['EFECTIVO', 'TARJETA', 'CLIP', 'MERCADO PAGO', 'TRANSFERENCIA', 'MIXTO', 'CRÉDITO', 'MONEDERO'].map(met => (
-                <button 
-                  key={met}
-                  onClick={() => handlePaymentClick(met)} 
-                  className={`flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-bold border transition-colors ${
-                    paymentMethod === met 
-                    ? met === 'CLIP' ? 'bg-amber-600/30 border-amber-500 text-amber-400 font-black shadow-md ring-1 ring-amber-400' : met === 'MONEDERO' ? 'bg-fuchsia-600/20 border-fuchsia-500 text-fuchsia-400' : met === 'MIXTO' ? 'bg-amber-600/20 border-amber-500 text-amber-400' : 'bg-blue-600/20 border-blue-500 text-blue-400' 
-                    : met === 'CLIP' ? 'bg-nexus-800 border-amber-600/40 text-amber-400 hover:bg-nexus-700' : met === 'MONEDERO' ? 'bg-nexus-800 border-nexus-700 text-fuchsia-400/70 hover:bg-nexus-700' : met === 'MIXTO' ? 'bg-nexus-800 border-nexus-700 text-amber-400/80 hover:bg-nexus-700' : 'bg-nexus-800 border-nexus-700 text-slate-300 hover:bg-nexus-700'
-                  }`}
-                >
-                  {met === 'EFECTIVO' && <Banknote className="w-3 h-3" />}
-                  {met === 'TARJETA' && <CreditCard className="w-3 h-3 text-blue-400" />}
-                  {met === 'CLIP' && <CreditCard className="w-3 h-3 text-amber-400" />}
-                  {met === 'MIXTO' && <Layers className="w-3 h-3 text-amber-400" />}
-                  {met === 'MONEDERO' && <Wallet className="w-3 h-3" />}
-                  {met === 'CLIP' ? 'CLIP' : met}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="p-4 space-y-3">
-            <button onClick={handlePausar} className="w-full py-3 bg-nexus-800 hover:bg-nexus-700 border border-nexus-700 rounded-xl text-amber-500 font-bold text-sm flex items-center justify-center gap-2 transition-colors">
-              <PauseCircle className="w-4 h-4" /> PAUSAR VENTA
-            </button>
-            {pausedSales.length > 0 && (
-              <button onClick={() => setShowPausedModal(true)} className="w-full py-2 bg-nexus-800 hover:bg-nexus-700 border border-nexus-700 rounded-xl text-blue-400 font-bold text-xs flex items-center justify-center gap-2 transition-colors mt-2">
-                RECUPERAR ({pausedSales.length})
-              </button>
-            )}
-            <button 
-              onClick={handleCobrar} 
-              className={`w-full py-5 rounded-xl text-white font-black text-xl flex items-center justify-center gap-2 shadow-lg transition-colors ${
-                cart.length > 0 ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/20' : 'bg-slate-700 '
-              }`}
-            >
-              <CheckCircle2 className="w-6 h-6" /> COBRAR VENTA
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* 6. MODAL COBRO MÓVIL (PANTALLA COMPLETA TOUCH PARA CELULAR) */}
