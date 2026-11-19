@@ -890,7 +890,7 @@ export default function PosTerminal() {
 
   return (
     <div 
-      className="flex-1 flex flex-col h-full bg-[#0b1120] text-slate-200 overflow-hidden select-none"
+      className="w-full h-full flex flex-col bg-[#0b1120] text-slate-200 overflow-hidden select-none" style={{ width: "100%", height: "100%" }}
       onClick={(e) => {
         // Si hace clic en la zona de trabajo y no hay modal abierto, devolver el cursor al escáner
         if (!showTicketModal && !isProcessing && !showMixtoModal && !showClientModal && !showPausedModal && !showUserModal) {
@@ -1031,67 +1031,60 @@ export default function PosTerminal() {
         </div>
       </div>
 
-      {/* 3. CUERPO PRINCIPAL 100% PANTALLA COMPLETA MÓVIL */}
-      <div className="flex-1 flex flex-col overflow-hidden w-full h-full relative">
-        
-        {/* CARRITO DE COMPRAS 100% ANCHO Y ALTO */}
-        <div className="flex-1 flex flex-col relative overflow-hidden w-full h-full">
-          <div className="flex-1 p-2 sm:p-3 overflow-y-auto custom-scrollbar bg-slate-900/40 pb-28">
-            {cart.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center opacity-40 p-4 text-center">
-                <ShoppingCart className="w-16 h-16 sm:w-20 sm:h-20 mb-3 text-emerald-400/60" />
-                <h2 className="text-base sm:text-xl font-black tracking-widest text-white uppercase">CARRITO VACÍO</h2>
-                <p className="text-xs font-bold text-slate-400 max-w-xs mt-1">
-                  Usa la cámara [📷] o escribe en el buscador para agregar productos.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {cart.map((item) => (
-                  <CartRow
-                    key={item.id}
-                    item={item}
-                    onUpdateQuantity={updateQuantity}
-                    onRemove={removeFromCart}
-                    onFocusSearch={focusSearchInput}
-                  />
-                ))}
-              </div>
-            )}
+      {/* 3. CARRITO DE COMPRAS (FLEX-1: OCUPA EL 100% DEL ESPACIO RESTANTE HASTA EL FONDO) */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-900/40 p-2 sm:p-3 w-full min-h-0">
+        {cart.length === 0 ? (
+          <div className="h-full min-h-[220px] flex flex-col items-center justify-center opacity-40 p-4 text-center">
+            <ShoppingCart className="w-16 h-16 sm:w-20 sm:h-20 mb-3 text-emerald-400/60" />
+            <h2 className="text-base sm:text-xl font-black tracking-widest text-white uppercase">CARRITO VACÍO</h2>
+            <p className="text-xs font-bold text-slate-400 max-w-xs mt-1">
+              Usa la cámara [📷] o escribe en el buscador para agregar productos.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2 pb-4">
+            {cart.map((item) => (
+              <CartRow
+                key={item.id}
+                item={item}
+                onUpdateQuantity={updateQuantity}
+                onRemove={removeFromCart}
+                onFocusSearch={focusSearchInput}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 4. CHECKOUT DOCK INFERIOR (SHRINK-0: FIJADO EXACTAMENTE AL FONDO DE LA PANTALLA DEL CELULAR) */}
+      <div className="shrink-0 bg-nexus-900/98 border-t-2 border-emerald-500/40 p-3 shadow-[0_-10px_30px_rgba(0,0,0,0.6)] z-20 w-full">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+            {cart.reduce((sum, item) => sum + item.cartQty, 0)} {cart.reduce((sum, item) => sum + item.cartQty, 0) === 1 ? 'artículo' : 'artículos'}
+          </span>
+          <div className="text-right">
+            <span className="text-[10px] text-slate-400 uppercase mr-1">Total:</span>
+            <span className="text-2xl font-black text-emerald-400 font-mono tracking-tight">${total.toFixed(2)}</span>
           </div>
         </div>
-
-        {/* 4. BARRA FIJA INFERIOR SIEMPRE VISIBLE EN CELULAR (CHECKOUT DOCK) */}
-        <div className="absolute bottom-0 left-0 right-0 bg-nexus-900/98 border-t-2 border-emerald-500/40 p-3 shadow-[0_-10px_30px_rgba(0,0,0,0.6)] z-20">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              {cart.reduce((sum, item) => sum + item.cartQty, 0)} {cart.reduce((sum, item) => sum + item.cartQty, 0) === 1 ? 'artículo' : 'artículos'}
-            </span>
-            <div className="text-right">
-              <span className="text-[10px] text-slate-400 uppercase mr-1">Total:</span>
-              <span className="text-2xl font-black text-emerald-400 font-mono tracking-tight">${total.toFixed(2)}</span>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              if (cart.length === 0) {
-                alert('El carrito está vacío. Agrega productos para cobrar.');
-                return;
-              }
-              setShowMobileCheckoutModal(true);
-            }}
-            disabled={cart.length === 0}
-            className={`w-full py-3.5 rounded-xl text-white font-black text-base uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${
-              cart.length > 0 
-                ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-emerald-600/30 cursor-pointer' 
-                : 'bg-slate-800 text-slate-500 border border-slate-700 opacity-60'
-            }`}
-          >
-            <CheckCircle2 className="w-5 h-5" />
-            <span>{cart.length > 0 ? `COBRAR ($${total.toFixed(2)})` : 'CARRITO VACÍO'}</span>
-          </button>
-        </div>
-
+        <button
+          onClick={() => {
+            if (cart.length === 0) {
+              alert('El carrito está vacío. Agrega productos para cobrar.');
+              return;
+            }
+            setShowMobileCheckoutModal(true);
+          }}
+          disabled={cart.length === 0}
+          className={`w-full py-3.5 rounded-xl text-white font-black text-base uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${
+            cart.length > 0 
+              ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-emerald-600/30 cursor-pointer' 
+              : 'bg-slate-800 text-slate-500 border border-slate-700 opacity-60'
+          }`}
+        >
+          <CheckCircle2 className="w-5 h-5" />
+          <span>{cart.length > 0 ? `COBRAR ($${total.toFixed(2)})` : 'CARRITO VACÍO'}</span>
+        </button>
       </div>
 
       {/* 6. MODAL COBRO MÓVIL (PANTALLA COMPLETA TOUCH PARA CELULAR) */}

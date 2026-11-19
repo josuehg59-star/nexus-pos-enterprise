@@ -6,18 +6,22 @@
   color-scheme: dark;
 }
 
+html, body, #root {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  background-color: #0b1120 !important;
+}
+
 body {
-  margin: 0;
-  padding: 0;
-  background-color: #0b1120;
   color: #f1f5f9;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   touch-action: manipulation;
-  overflow-x: hidden;
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Scrollbars finos para móvil y tablet */

@@ -212,7 +212,7 @@ export function App() {
   };
 
   return (
-    <div className="flex h-[100dvh] w-full max-w-[100vw] bg-nexus-900 text-slate-200 overflow-hidden relative font-sans">
+    <div className="flex h-full w-full bg-nexus-900 text-slate-200 overflow-hidden relative font-sans" style={{ height: '100%', width: '100%' }}>
 
       {/* BACKDROP PARA MÓVIL CUANDO EL MENÚ ESTÁ ABIERTO */}
       {isMenuOpen && (
