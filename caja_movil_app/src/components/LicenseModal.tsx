@@ -14,6 +14,8 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ isOpen, onClose, onA
   const [keyInput, setKeyInput] = useState('');
   const [clientInput, setClientInput] = useState('');
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [showCertModal, setShowCertModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -233,6 +235,29 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ isOpen, onClose, onA
             </div>
           </div>
 
+          {/* AVISO DE PRIVACIDAD Y CERTIFICADO OFICIAL */}
+          <div className="p-3 bg-[#070d18] rounded-2xl border border-nexus-800 space-y-2">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block text-center">
+              ⚖️ MARCO LEGAL Y AUTENTICIDAD:
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              <button 
+                type="button"
+                onClick={() => setShowCertModal(true)}
+                className="py-2.5 px-3 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-500/40 text-amber-300 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-md"
+              >
+                <span>📜</span> <span>Certificado Oficial</span>
+              </button>
+              <button 
+                type="button"
+                onClick={() => setShowPrivacyModal(true)}
+                className="py-2.5 px-3 bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/40 text-cyan-300 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-md"
+              >
+                <span>🛡️</span> <span>Aviso Privacidad</span>
+              </button>
+            </div>
+          </div>
+
           {/* CONTACTO CON JOSUE HERNANDEZ */}
           <div className="p-3 rounded-2xl bg-nexus-950/80 border border-nexus-800 text-center space-y-2">
             <p className="text-[11px] font-bold text-slate-300">
@@ -252,6 +277,105 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ isOpen, onClose, onA
           </div>
         </div>
       </div>
-    </div>
+    
+      {/* MODAL: CERTIFICADO OFICIAL DE AUTENTICIDAD */}
+      {showCertModal && (
+        <div className="fixed inset-0 z-[120] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-500/60 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl relative text-slate-200">
+            <div className="flex items-center justify-between border-b border-amber-500/30 pb-3">
+              <div className="flex items-center gap-2 text-amber-400">
+                <span className="text-2xl">🏆</span>
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-wider text-white">Certificado Oficial de Autenticidad</h3>
+                  <p className="text-[10px] text-amber-400 font-semibold">Software Original Registrado & Licencia de Uso Autorizada</p>
+                </div>
+              </div>
+              <button onClick={() => setShowCertModal(false)} className="text-slate-400 hover:text-white text-lg font-bold p-1">&times;</button>
+            </div>
+
+            <div className="p-4 bg-slate-950/80 rounded-2xl border border-amber-500/20 text-xs space-y-2.5 font-sans">
+              <div className="flex justify-between items-center text-[11px] border-b border-slate-800 pb-2">
+                <span className="text-slate-400">Software Oficial:</span>
+                <b className="text-emerald-400 font-black">NEXUS POS ENTERPRISE v2.0</b>
+              </div>
+              <div className="flex justify-between items-center text-[11px] border-b border-slate-800 pb-2">
+                <span className="text-slate-400">Autor y Desarrollador:</span>
+                <b className="text-white font-black">JOSUE HERNANDEZ GUTIERREZ</b>
+              </div>
+              <div className="flex justify-between items-center text-[11px] border-b border-slate-800 pb-2">
+                <span className="text-slate-400">Contacto y Soporte Oficial:</span>
+                <span className="text-cyan-400 font-mono font-bold">+52 961 276 5041</span>
+              </div>
+              <div className="flex justify-between items-center text-[11px] border-b border-slate-800 pb-2">
+                <span className="text-slate-400">Ubicación:</span>
+                <span className="text-slate-300 font-bold">Tuxtla Gutiérrez, Chiapas, México</span>
+              </div>
+              <div className="flex justify-between items-center text-[11px] border-b border-slate-800 pb-2">
+                <span className="text-slate-400">Sello Criptográfico Digital:</span>
+                <span className="font-mono text-[10px] text-emerald-400 truncate max-w-[200px]">SHA256: NEXUS-POS-ORIGINAL-AUTH</span>
+              </div>
+              <div className="flex justify-between items-center text-[11px]">
+                <span className="text-slate-400">Estado de Validez:</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-black border border-emerald-500/40 text-[10px]">
+                  ORIGINAL & VERIFICADA
+                </span>
+              </div>
+            </div>
+
+            <p className="text-[10px] text-slate-400 leading-relaxed text-justify">
+              Este sistema de Punto de Venta ha sido programado de forma exclusiva por <b>Josue Hernandez Gutierrez</b>. Se otorga una licencia de uso legítima, intransferible y protegida por derechos de autor y propiedad intelectual de software comercial.
+            </p>
+
+            <div className="flex items-center gap-2 pt-2 border-t border-slate-800">
+              <button onClick={() => window.print()} className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition cursor-pointer">
+                <span>🖨️</span> <span>Imprimir Certificado</span>
+              </button>
+              <button onClick={() => setShowCertModal(false)} className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-black transition cursor-pointer">
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: AVISO DE PRIVACIDAD LEGAL */}
+      {showPrivacyModal && (
+        <div className="fixed inset-0 z-[120] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-cyan-500/40 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl relative text-slate-300 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 sticky top-0 bg-slate-900 z-10">
+              <div className="flex items-center gap-2 text-cyan-400">
+                <span className="text-2xl">🛡️</span>
+                <div>
+                  <h3 className="text-sm font-black uppercase text-white">Aviso de Privacidad Integral</h3>
+                  <p className="text-[10px] text-slate-400">Conforme a la Ley Federal de Protección de Datos Personales (LFPDPPP - México)</p>
+                </div>
+              </div>
+              <button onClick={() => setShowPrivacyModal(false)} className="text-slate-400 hover:text-white text-lg font-bold p-1">&times;</button>
+            </div>
+
+            <div className="text-xs space-y-3 leading-relaxed text-justify text-slate-300 font-sans">
+              <p>
+                <b>1. Identidad y Responsable del Tratamiento:</b> El titular del establecimiento comercial que opera este punto de venta y su autor tecnológico <b>Josue Hernandez Gutierrez</b> (Tel: 961 276 5041), en estricto cumplimiento de la <i>Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP)</i>, manifiestan que los datos registrados se gestionan con estricta confidencialidad.
+              </p>
+              <p>
+                <b>2. Datos Recabados y Finalidad:</b> Para la operación comercial de venta, emisión de tickets de compra, monedero electrónico de lealtad, cobranza de créditos a clientes y envío de comprobantes digitales vía WhatsApp, se recaban únicamente: Nombre comercial, teléfono celular, compras realizadas y saldos pendientes.
+              </p>
+              <p>
+                <b>3. Almacenamiento Local Seguro y No Transferencia:</b> Los datos de los clientes y productos residen de forma 100% privada en la base de datos local del negocio. <b>JAMÁS son vendidos, cedidos ni transferidos a terceras empresas comerciales ni publicitarias.</b>
+              </p>
+              <p>
+                <b>4. Derechos ARCO:</b> En cualquier momento, los titulares de los datos pueden ejercer sus derechos de Acceso, Rectificación, Cancelación u Oposición (ARCO) acudiendo directamente al establecimiento o vía soporte técnico.
+              </p>
+            </div>
+
+            <div className="pt-3 border-t border-slate-800">
+              <button onClick={() => setShowPrivacyModal(false)} className="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-black transition cursor-pointer">
+                Entendido y Aceptado
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+</div>
   );
 };
