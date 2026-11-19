@@ -282,10 +282,15 @@ export default function PosTerminal() {
       setSuggestions([]);
       return;
     }
+    // Si se está escaneando un código de barras numérico largo (>= 8 dígitos), no saturar la pantalla con dropdown
+    if (/^\d{8,}$/.test(q)) {
+      setSuggestions([]);
+      return;
+    }
     const timer = setTimeout(() => {
       const results = productIndex.search(q, 15);
       setSuggestions(results);
-    }, 80);
+    }, 100);
     return () => clearTimeout(timer);
   }, [scanInput]);
 
@@ -308,20 +313,27 @@ export default function PosTerminal() {
     // 2. Coincidencia EXACTA por código de barras o SKU en memoria (O(1) < 0.001ms)
     let p = productIndex.findByBarcode(val);
 
-    // 3. Si no hay código exacto, verificar si el usuario seleccionó/vio sugerencias
-    if (!p && suggestions.length > 0) {
+    // 3. Fallback directo a Dexie por SKU o códigos alternativos
+    if (!p) {
+      p = await db.products.where('sku').equals(val).first();
+    }
+    if (!p) {
+      p = await db.products.filter(item => 
+        String(item.sku || '').trim().toLowerCase() === val.toLowerCase() ||
+        String(item.barcode2 || '').trim().toLowerCase() === val.toLowerCase() ||
+        String(item.barcode3 || '').trim().toLowerCase() === val.toLowerCase()
+      ).first();
+    }
+
+    // 4. Solo si NO es un código de barras numérico y el usuario buscó por nombre (ej: "aceite")
+    if (!p && !/^\d{6,}$/.test(val) && suggestions.length > 0) {
       p = suggestions[0];
     }
 
-    // 4. Si aún no está, probar búsqueda ponderada en memoria
-    if (!p) {
+    // 5. Búsqueda ponderada en memoria solo si no es código de barras
+    if (!p && !/^\d{6,}$/.test(val)) {
       const matches = productIndex.search(val, 1);
       if (matches.length > 0) p = matches[0];
-    }
-
-    // 5. Fallback directo a Dexie
-    if (!p) {
-      p = await db.products.where('sku').equals(val).first();
     }
 
     if (p) {
@@ -339,8 +351,37 @@ export default function PosTerminal() {
     }
   };
 
+    const handleScanInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    // Si el escáner envió un salto de línea (sufijo Enter de escáner USB/Bluetooth)
+    if (raw.includes('\n') || raw.includes('\r')) {
+      const clean = raw.replace(/[\r\n]/g, '').trim();
+      setScanInput('');
+      setSuggestions([]);
+      if (clean) {
+        processBarcodeOrSearch(clean);
+      }
+      return;
+    }
+
+    setScanInput(raw);
+
+    const trimmed = raw.trim();
+    // Auto-detección inmediata: si es código de barras numérico (>= 7 dígitos) y coincide exactamente
+    if (/^\d{7,14}$/.test(trimmed)) {
+      const exactProduct = productIndex.findByBarcode(trimmed);
+      if (exactProduct) {
+        playBeepSuccess();
+        addToCart(exactProduct);
+        setScanInput('');
+        setSuggestions([]);
+        return;
+      }
+    }
+  };
+
   const handleScan = async (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && scanInput.trim() !== '') {
+    if ((e.key === 'Enter' || e.keyCode === 13 || e.which === 13) && scanInput.trim() !== '') {
       e.preventDefault();
       await processBarcodeOrSearch(scanInput);
     }
@@ -897,7 +938,7 @@ export default function PosTerminal() {
             <input 
               type="text" 
               value={scanInput}
-              onChange={e => setScanInput(e.target.value)}
+              onChange={handleScanInputChange}
               onKeyDown={handleScan}
               ref={searchInputRef}
               id="pos-search-input"

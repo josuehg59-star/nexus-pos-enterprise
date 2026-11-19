@@ -10,6 +10,8 @@ import {
 import { useLiveQuery } from 'dexie-react-hooks';
 import { usePosStore, lineTotal } from '../store/useStore';
 import { useSettings } from '../store/useSettings';
+import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
+import { Camera } from 'lucide-react';
 import { db } from '../store/database';
 import { productIndex } from '../store/productIndex';
 import { playBeepSuccess, playBeepError } from '../utils/sound';
@@ -112,6 +114,7 @@ export default function PosTerminal() {
 
   
   const [scanInput, setScanInput] = useState('');
+  const [showCameraScanner, setShowCameraScanner] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [client, setClient] = useState<{ name: string; monedero: number; id?: number }>({ name: 'PUBLICO GENERAL', monedero: 0, id: 0 });
   const [paymentMethod, setPaymentMethod] = useState('EFECTIVO');
@@ -282,10 +285,15 @@ export default function PosTerminal() {
       setSuggestions([]);
       return;
     }
+    // Si se está escaneando un código de barras numérico largo (>= 8 dígitos), no saturar la pantalla con dropdown
+    if (/^\d{8,}$/.test(q)) {
+      setSuggestions([]);
+      return;
+    }
     const timer = setTimeout(() => {
       const results = productIndex.search(q, 15);
       setSuggestions(results);
-    }, 80);
+    }, 100);
     return () => clearTimeout(timer);
   }, [scanInput]);
 
@@ -308,20 +316,27 @@ export default function PosTerminal() {
     // 2. Coincidencia EXACTA por código de barras o SKU en memoria (O(1) < 0.001ms)
     let p = productIndex.findByBarcode(val);
 
-    // 3. Si no hay código exacto, verificar si el usuario seleccionó/vio sugerencias
-    if (!p && suggestions.length > 0) {
+    // 3. Fallback directo a Dexie por SKU o códigos alternativos
+    if (!p) {
+      p = await db.products.where('sku').equals(val).first();
+    }
+    if (!p) {
+      p = await db.products.filter(item => 
+        String(item.sku || '').trim().toLowerCase() === val.toLowerCase() ||
+        String(item.barcode2 || '').trim().toLowerCase() === val.toLowerCase() ||
+        String(item.barcode3 || '').trim().toLowerCase() === val.toLowerCase()
+      ).first();
+    }
+
+    // 4. Solo si NO es un código de barras numérico y el usuario buscó por nombre (ej: "aceite")
+    if (!p && !/^\d{6,}$/.test(val) && suggestions.length > 0) {
       p = suggestions[0];
     }
 
-    // 4. Si aún no está, probar búsqueda ponderada en memoria
-    if (!p) {
+    // 5. Búsqueda ponderada en memoria solo si no es código de barras
+    if (!p && !/^\d{6,}$/.test(val)) {
       const matches = productIndex.search(val, 1);
       if (matches.length > 0) p = matches[0];
-    }
-
-    // 5. Fallback directo a Dexie
-    if (!p) {
-      p = await db.products.where('sku').equals(val).first();
     }
 
     if (p) {
@@ -339,8 +354,37 @@ export default function PosTerminal() {
     }
   };
 
+    const handleScanInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    // Si el escáner envió un salto de línea (sufijo Enter de escáner USB/Bluetooth)
+    if (raw.includes('\n') || raw.includes('\r')) {
+      const clean = raw.replace(/[\r\n]/g, '').trim();
+      setScanInput('');
+      setSuggestions([]);
+      if (clean) {
+        processBarcodeOrSearch(clean);
+      }
+      return;
+    }
+
+    setScanInput(raw);
+
+    const trimmed = raw.trim();
+    // Auto-detección inmediata: si es código de barras numérico (>= 7 dígitos) y coincide exactamente
+    if (/^\d{7,14}$/.test(trimmed)) {
+      const exactProduct = productIndex.findByBarcode(trimmed);
+      if (exactProduct) {
+        playBeepSuccess();
+        addToCart(exactProduct);
+        setScanInput('');
+        setSuggestions([]);
+        return;
+      }
+    }
+  };
+
   const handleScan = async (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && scanInput.trim() !== '') {
+    if ((e.key === 'Enter' || e.keyCode === 13 || e.which === 13) && scanInput.trim() !== '') {
       e.preventDefault();
       await processBarcodeOrSearch(scanInput);
     }
@@ -892,19 +936,20 @@ export default function PosTerminal() {
 
           <div className="w-px h-6 bg-nexus-800 mx-2 hidden sm:block"></div>
 
-          <div className="relative" ref={searchContainerRef}>
-            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
-            <input 
-              type="text" 
-              value={scanInput}
-              onChange={e => setScanInput(e.target.value)}
-              onKeyDown={handleScan}
-              ref={searchInputRef}
-              id="pos-search-input"
-              placeholder="Buscar producto o escanear..."
-              className="w-96 bg-nexus-800 border-2 border-nexus-700 text-white pl-10 pr-4 py-2 rounded-xl font-bold focus:outline-none focus:border-emerald-400 text-sm transition-colors shadow-inner"
-              autoFocus
-            />
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1" ref={searchContainerRef}>
+              <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
+              <input 
+                type="text" 
+                value={scanInput}
+                onChange={handleScanInputChange}
+                onKeyDown={handleScan}
+                ref={searchInputRef}
+                id="pos-search-input"
+                placeholder="Buscar producto o escanear..."
+                className="w-full sm:w-80 bg-nexus-800 border-2 border-nexus-700 text-white pl-10 pr-4 py-2 rounded-xl font-bold focus:outline-none focus:border-emerald-400 text-sm transition-colors shadow-inner"
+                autoFocus
+              />
             
             {/* BANNER DE ERROR NO BLOQUEANTE */}
             {scanErrorMsg && (
@@ -914,7 +959,18 @@ export default function PosTerminal() {
               </div>
             )}
 
-            {/* DROPDOWN DE SUGERENCIAS EN VIVO */}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowCameraScanner(true)}
+              title="Escanear con Cámara"
+              className="p-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-emerald-600/30 active:scale-95 transition-all cursor-pointer"
+            >
+              <Camera className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="relative">
+          {/* DROPDOWN DE SUGERENCIAS EN VIVO */}
             {suggestions.length > 0 && (
               <div className="absolute top-full left-0 mt-2 w-[500px] bg-nexus-900 border border-nexus-700 rounded-xl shadow-2xl max-h-96 overflow-y-auto z-50">
                 {suggestions.map((p, idx) => (
@@ -1403,6 +1459,16 @@ export default function PosTerminal() {
           </div>
         </div>
       )}
+
+      {/* MODAL ESCÁNER CON CÁMARA */}
+      <BarcodeScannerModal 
+        isOpen={showCameraScanner} 
+        onClose={() => setShowCameraScanner(false)} 
+        onScan={(code) => {
+          setShowCameraScanner(false);
+          processBarcodeOrSearch(code);
+        }} 
+      />
 
       {/* MODAL VENTA FINALIZADA (TICKET) */}
       {showTicketModal && lastTicket && (
