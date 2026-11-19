@@ -1,0 +1,66 @@
+{
+  "name": "nexus_pos_enterprise",
+  "version": "2.0.0",
+  "description": "NEXUS POS ENTERPRISE - Punto de Venta Local & Móvil",
+  "main": "main.js",
+  "author": "JOSUE HERNANDEZ GUTIERREZ (TEL: 9612765041)",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64"
+  },
+  "devDependencies": {
+    "electron": "^25.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.nexus.pos.enterprise",
+    "productName": "NEXUS POS ENTERPRISE",
+    "icon": "icon.ico",
+    "win": {
+      "target": "nsis",
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "NEXUS POS ENTERPRISE",
+      "artifactName": "NEXUS_POS_ENTERPRISE_INSTALADOR_PC.exe",
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico",
+      "installerHeaderIcon": "icon.ico"
+    },
+    "extraResources": [
+      {
+        "from": "sync_server_3008.js",
+        "to": "sync_server_3008.js"
+      },
+      {
+        "from": "caja_movil_app/dist",
+        "to": "caja_movil_app/dist"
+      }
+    ],
+    "files": [
+      "main.js",
+      "package.json",
+      "sync_server_3008.js",
+      "mobile_web_server.js",
+      "icon.ico",
+      "icon.png",
+      "caja_local/frontend/dist/**/*",
+      "caja_movil_app/dist/**/*",
+      "!node_modules/**/*",
+      "!caja_local/frontend/src/**/*",
+      "!caja_local/frontend/node_modules/**/*",
+      "!SISTEMA_RETAILPOS_MOVIL/**/*",
+      "!dist/**/*",
+      "!*.apk",
+      "!*.bat",
+      "!*.zip",
+      "!*.7z",
+      "!RESPALDO_COMPLETO_SISTEMA.json",
+      "!nexus_local_db.json"
+    ]
+  }
+}

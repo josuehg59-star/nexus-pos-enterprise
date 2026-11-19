@@ -1,0 +1,4 @@
+@echo off
+title CONTROL DE EFECTIVO Y PROVEEDORES (APP SEPARADA)
+start "" "c:\Users\JOSUE\Desktop\NEXUS_POS_ENTERPRISE\CONTROL_PROVEEDORES_APP\index.html"
+exit

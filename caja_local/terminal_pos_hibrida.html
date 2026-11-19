@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS POS ENTERPRISE - Terminal Híbrida</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        nexus: { 900: '#0f172a', 800: '#1e293b', 700: '#334155', accent: '#10b981' }
+                    }
+                }
+            }
+        }
+    </script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-nexus-900 text-slate-200 h-screen overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const Icon = ({ name, className = "w-5 h-5" }) => {
+            const icons = {
+                wifi: <path d="M5 12.55a11 11 0 0 1 14.08 0 M1.42 9a16 16 0 0 1 21.16 0 M8.53 16.11a6 6 0 0 1 6.95 0 M12 20h.01" />,
+                wifiOff: <path d="M1 1l22 22 M16.72 11.06A10.94 10.94 0 0 1 19 12.55 M5 12.55a10.94 10.94 0 0 1 5.17-2.39 M10.71 5.05A16 16 0 0 1 22.58 9 M1.42 9a15.91 15.91 0 0 1 4.7-2.88 M8.53 16.11a6 6 0 0 1 6.95 0 M12 20h.01" />,
+                zap: <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />,
+                cart: <path d="M3 3h2l3.6 7.6L7 14h10 M7 17a2 2 0 100 4 2 2 0 000-4z M17 17a2 2 0 100 4 2 2 0 000-4z" />,
+                smartphone: <path d="M5 2h14a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z M12 18h.01" />,
+                cloud: <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z" />,
+                save: <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z M17 21v-8H7v8 M7 3v5h8" />,
+                trash: <path d="M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2 M10 11v6 M14 11v6" />
+            };
+            return (
+                <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    {icons[name]}
+                </svg>
+            );
+        };
+
+        const PosTerminal = () => {
+            const [isOnline, setIsOnline] = useState(true);
+            const [cart, setCart] = useState([]);
+            const [syncQueue, setSyncQueue] = useState(0);
+            const [scanInput, setScanInput] = useState('');
+            const [modal, setModal] = useState(null);
+
+            // Simular auto-guardado ante apagones
+            useEffect(() => {
+                if (cart.length > 0) {
+                    console.log("[NEXUS WAL] Auto-guardando ticket en SQLite por seguridad contra apagones.");
+                }
+            }, [cart]);
+
+            const addItem = (type) => {
+                if (type === 'recarga' && !isOnline) {
+                    setModal('ERROR_OFFLINE');
+                    return;
+                }
+                
+                const newItem = type === 'producto' 
+                    ? { id: Date.now(), name: 'Papas Sabritas 45g', price: 20.00, type: 'producto' }
+                    : { id: Date.now(), name: 'Recarga Telcel $50', price: 50.00, type: 'servicio' };
+                
+                setCart([...cart, newItem]);
+                setScanInput('');
+            };
+
+            const payTicket = () => {
+                if (cart.length === 0) return;
+                
+                // Las recargas fuerzan validación en tiempo real (ACID)
+                const hasServices = cart.some(i => i.type === 'servicio');
+                if (hasServices && !isOnline) {
+                    setModal('ERROR_OFFLINE');
+                    return;
+                }
+
+                if (isOnline) {
+                    // Simular envío a la nube directo
+                    setModal('PAID_ONLINE');
+                } else {
+                    // Simular envío a la cola local de Kafka/SQLite
+                    setSyncQueue(prev => prev + 1);
+                    setModal('PAID_OFFLINE');
+                }
+                setCart([]);
+            };
+
+            const total = cart.reduce((sum, item) => sum + item.price, 0);
+
+            return (
+                <div className="flex h-screen bg-nexus-900 text-slate-200">
+                    
+                    {/* Área Izquierda: Lista de Venta */}
+                    <div className="flex-1 flex flex-col border-r border-nexus-800 relative">
+                        
+                        {/* Header y Estado de Red */}
+                        <div className="h-16 flex items-center justify-between px-6 border-b border-nexus-800 bg-nexus-800/30">
+                            <h2 className="font-black text-xl tracking-wider">TERMINAL <span className="text-nexus-accent">POS</span></h2>
+                            
+                            <div className="flex items-center gap-4">
+                                {/* Simulador de Apagón/Internet */}
+                                <button 
+                                    onClick={() => setIsOnline(!isOnline)}
+                                    className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold border transition-colors ${isOnline ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10' : 'border-red-500/30 text-red-400 bg-red-500/10'}`}
+                                >
+                                    <Icon name={isOnline ? 'wifi' : 'wifiOff'} className="w-4 h-4" />
+                                    {isOnline ? 'ONLINE (NUBE ACTIVA)' : 'OFFLINE (SQLITE LOCAL)'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Estado Auto-Guardado Anti-Apagones */}
+                        <div className="h-8 bg-nexus-800/80 flex items-center px-6 gap-2 text-xs text-slate-400 border-b border-nexus-700/50">
+                            <Icon name="save" className="w-3 h-3 text-nexus-accent" />
+                            <span>TICKET GUARDADO LOCALMENTE (ANTI-APAGONES)</span>
+                        </div>
+
+                        {/* Lista de Productos */}
+                        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-[#0b1120]">
+                            {cart.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center text-slate-600">
+                                    <Icon name="cart" className="w-16 h-16 mb-4 opacity-20" />
+                                    <p className="font-bold">El ticket está vacío</p>
+                                    <p className="text-sm">Escanea un producto para comenzar</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {cart.map((item, idx) => (
+                                        <div key={item.id} className="flex justify-between items-center p-4 bg-nexus-800 rounded-xl border border-nexus-700/50 shadow-sm">
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${item.type === 'producto' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-fuchsia-500/10 text-fuchsia-400'}`}>
+                                                    <Icon name={item.type === 'producto' ? 'box' : 'smartphone'} className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold">{item.name}</h3>
+                                                    <p className="text-xs text-slate-400 uppercase tracking-wider">{item.type}</p>
+                                                </div>
+                                            </div>
+                                            <span className="font-black text-lg">${item.price.toFixed(2)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Input Simulación de Escáner */}
+                        <div className="h-20 border-t border-nexus-800 p-4 bg-nexus-900">
+                            <form onSubmit={(e) => { e.preventDefault(); addItem('producto'); }} className="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    value={scanInput}
+                                    onChange={(e) => setScanInput(e.target.value)}
+                                    placeholder="Escanea o teclea un código..." 
+                                    className="flex-1 bg-nexus-800 border border-nexus-700 rounded-xl px-4 text-white focus:outline-none focus:border-nexus-accent"
+                                    autoFocus
+                                />
+                                <button type="submit" className="bg-nexus-800 hover:bg-nexus-700 px-6 font-bold rounded-xl text-slate-300">
+                                    ENTER
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    {/* Área Derecha: Resumen y Botones */}
+                    <div className="w-[350px] bg-nexus-900 flex flex-col">
+                        
+                        {/* Monitor de Sincronización (Kafka) */}
+                        <div className="p-4 bg-nexus-800/30 border-b border-nexus-800 flex justify-between items-center">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pendientes de Sincronizar</span>
+                            <div className="flex items-center gap-2 bg-nexus-800 px-3 py-1 rounded-lg border border-nexus-700">
+                                <Icon name="cloud" className={`w-4 h-4 ${syncQueue > 0 ? 'text-amber-400 animate-pulse' : 'text-slate-500'}`} />
+                                <span className={`font-black ${syncQueue > 0 ? 'text-amber-400' : 'text-slate-500'}`}>{syncQueue}</span>
+                            </div>
+                        </div>
+
+                        {/* Botones de Venta Especial (Híbridos) */}
+                        <div className="p-6 border-b border-nexus-800">
+                            <h4 className="text-xs font-bold text-slate-500 mb-4 uppercase">Servicios Especiales (Requieren Red)</h4>
+                            <button 
+                                onClick={() => addItem('recarga')}
+                                className="w-full flex items-center justify-between p-4 bg-fuchsia-600/10 hover:bg-fuchsia-600/20 border border-fuchsia-600/30 rounded-xl text-fuchsia-400 transition-colors"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Icon name="smartphone" />
+                                    <span className="font-bold text-sm">Vender Recarga Telcel</span>
+                                </div>
+                                <Icon name="zap" className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {/* Totales y Cobro */}
+                        <div className="mt-auto p-6 bg-nexus-800/20">
+                            <div className="flex justify-between items-center mb-6">
+                                <span className="text-lg font-bold text-slate-400">TOTAL A PAGAR</span>
+                                <span className="text-5xl font-black text-white tracking-tight">${total.toFixed(2)}</span>
+                            </div>
+
+                            <button 
+                                onClick={payTicket}
+                                disabled={cart.length === 0}
+                                className={`w-full py-5 rounded-2xl font-black text-lg transition-all ${cart.length === 0 ? 'bg-nexus-800 text-slate-500 cursor-not-allowed' : 'bg-nexus-accent hover:bg-emerald-400 text-white shadow-lg shadow-nexus-accent/20'}`}
+                            >
+                                COBRAR TICKET (ENTER)
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* MODALES DE RESPUESTA */}
+                    {modal === 'ERROR_OFFLINE' && (
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+                            <div className="bg-nexus-900 border border-red-500/30 p-8 rounded-3xl w-[400px] text-center shadow-2xl">
+                                <Icon name="wifiOff" className="w-16 h-16 text-red-400 mx-auto mb-4" />
+                                <h2 className="text-2xl font-black text-white mb-2">Transacción Rechazada</h2>
+                                <p className="text-slate-400 mb-6">Las recargas y servicios financieros requieren conexión en tiempo real a la nube por seguridad. Restablece la conexión para continuar.</p>
+                                <button onClick={() => setModal(null)} className="w-full py-3 bg-nexus-800 hover:bg-nexus-700 text-white font-bold rounded-xl">Entendido</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {modal === 'PAID_ONLINE' && (
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+                            <div className="bg-nexus-900 border border-emerald-500/30 p-8 rounded-3xl w-[400px] text-center shadow-2xl">
+                                <Icon name="zap" className="w-16 h-16 text-emerald-400 mx-auto mb-4" />
+                                <h2 className="text-2xl font-black text-white mb-2">Cobro Exitoso</h2>
+                                <p className="text-slate-400 mb-6">Ticket sincronizado inmediatamente con la base de datos PostgreSQL en la nube.</p>
+                                <button onClick={() => setModal(null)} className="w-full py-3 bg-nexus-800 hover:bg-nexus-700 text-white font-bold rounded-xl">Siguiente Cliente</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {modal === 'PAID_OFFLINE' && (
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+                            <div className="bg-nexus-900 border border-amber-500/30 p-8 rounded-3xl w-[400px] text-center shadow-2xl">
+                                <Icon name="save" className="w-16 h-16 text-amber-400 mx-auto mb-4" />
+                                <h2 className="text-2xl font-black text-white mb-2">Venta Local (Offline)</h2>
+                                <p className="text-slate-400 mb-6">Se ha guardado el ticket blindado en SQLite. Será sincronizado en segundo plano cuando regrese el internet.</p>
+                                <button onClick={() => setModal(null)} className="w-full py-3 bg-nexus-800 hover:bg-nexus-700 text-white font-bold rounded-xl">Siguiente Cliente</button>
+                            </div>
+                        </div>
+                    )}
+
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<PosTerminal />);
+    </script>
+</body>
+</html>

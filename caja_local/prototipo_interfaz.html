@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS POS ENTERPRISE</title>
+    <!-- Tailwind CSS para diseño moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        nexus: {
+                            900: '#0f172a', // Fondo oscuro principal
+                            800: '#1e293b', // Paneles
+                            700: '#334155', // Bordes
+                            accent: '#10b981' // Verde esmeralda (Botones principales)
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- React y Babel para la interactividad de los menús -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Iconos Lucide (Los más elegantes actualmente) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-nexus-900 text-slate-200 h-screen overflow-hidden selection:bg-nexus-accent selection:text-white">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Íconos SVG simples para evitar dependencias en el prototipo
+        const Icon = ({ name, className = "w-5 h-5" }) => {
+            const icons = {
+                dashboard: <path d="M3 3v18h18 M7 14l4-4 4 4 4-4" />,
+                cart: <path d="M3 3h2l3.6 7.6L7 14h10 M7 17a2 2 0 100 4 2 2 0 000-4z M17 17a2 2 0 100 4 2 2 0 000-4z" />,
+                box: <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />,
+                truck: <path d="M1 3h15v13H1z M16 8h4l3 3v5h-7V8z" />,
+                users: <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75" />,
+                settings: <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />,
+                chevron: <path d="M6 9l6 6 6-6" />
+            };
+            return (
+                <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    {icons[name]}
+                </svg>
+            );
+        };
+
+        const MenuItem = ({ title, icon, subItems, active, expanded, onClick }) => {
+            return (
+                <div className="mb-2">
+                    <button 
+                        onClick={onClick}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 border border-transparent
+                        ${active ? 'bg-nexus-accent text-white shadow-lg shadow-nexus-accent/20' : 'hover:bg-nexus-800 text-slate-400 hover:text-white'}`}
+                    >
+                        <div className="flex items-center gap-3">
+                            <Icon name={icon} className={`w-5 h-5 ${active ? 'text-white' : 'text-slate-500'}`} />
+                            <span className="font-bold text-sm tracking-wide">{title}</span>
+                        </div>
+                        {subItems && (
+                            <div className={`transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}>
+                                <Icon name="chevron" className="w-4 h-4 opacity-50" />
+                            </div>
+                        )}
+                    </button>
+                    
+                    {/* Submenú Desplegable */}
+                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expanded ? 'max-h-48 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
+                        <div className="pl-11 pr-4 py-2 space-y-2 border-l-2 border-nexus-800 ml-6">
+                            {subItems?.map((item, idx) => (
+                                <button key={idx} className="block w-full text-left text-xs font-semibold text-slate-500 hover:text-nexus-accent transition-colors py-1">
+                                    {item}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const App = () => {
+            const [activeMenu, setActiveMenu] = useState('operacion');
+            const [expandedMenu, setExpandedMenu] = useState('operacion');
+
+            const toggleMenu = (id) => {
+                setExpandedMenu(expandedMenu === id ? null : id);
+                setActiveMenu(id);
+            };
+
+            const modules = [
+                { id: 'dashboard', title: 'DASHBOARD BI', icon: 'dashboard', subItems: ['Resumen Global', 'Analítica Avanzada'] },
+                { id: 'operacion', title: 'OPERACIÓN Y VENTAS', icon: 'cart', subItems: ['Terminal POS', 'Servicios y Recargas', 'Gestión de Caja Z'] },
+                { id: 'inventario', title: 'INVENTARIO Y ALMACÉN', icon: 'box', subItems: ['Catálogo Maestro', 'Movimientos y Kárdex', 'Auditorías Cíclicas', 'Código de Barras'] },
+                { id: 'suministro', title: 'CADENA DE SUMINISTRO', icon: 'truck', subItems: ['Proveedores', 'Órdenes de Compra (IA)'] },
+                { id: 'crm', title: 'FIDELIZACIÓN (CRM)', icon: 'users', subItems: ['Directorio de Clientes', 'Créditos y Monedero'] },
+                { id: 'config', title: 'CONFIGURACIÓN', icon: 'settings', subItems: ['Panel de Control', 'Usuarios y Permisos', 'Sucursales'] },
+            ];
+
+            return (
+                <div className="flex h-screen">
+                    {/* BARRA LATERAL (SIDEBAR) */}
+                    <aside className="w-72 bg-nexus-900 border-r border-nexus-800 flex flex-col shadow-2xl z-10 relative">
+                        {/* Logo Area */}
+                        <div className="h-20 flex items-center px-6 border-b border-nexus-800">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-nexus-accent to-emerald-700 flex items-center justify-center mr-3 shadow-lg shadow-nexus-accent/20">
+                                <span className="font-black text-white text-xl">N</span>
+                            </div>
+                            <div>
+                                <h1 className="font-black text-white text-lg tracking-wider">NEXUS<span className="text-nexus-accent">POS</span></h1>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Enterprise Edition</p>
+                            </div>
+                        </div>
+
+                        {/* Menu Area */}
+                        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                            <div className="text-xs font-bold text-slate-600 mb-4 ml-2 uppercase tracking-widest">Módulos Principales</div>
+                            {modules.map(mod => (
+                                <MenuItem 
+                                    key={mod.id}
+                                    title={mod.title} 
+                                    icon={mod.icon}
+                                    subItems={mod.subItems}
+                                    active={activeMenu === mod.id}
+                                    expanded={expandedMenu === mod.id}
+                                    onClick={() => toggleMenu(mod.id)}
+                                />
+                            ))}
+                        </div>
+
+                        {/* User Area */}
+                        <div className="p-4 border-t border-nexus-800 bg-nexus-900">
+                            <div className="flex items-center gap-3 p-3 rounded-xl bg-nexus-800/50 border border-nexus-700/50">
+                                <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center border-2 border-nexus-accent">
+                                    <span className="text-white font-bold text-sm">JD</span>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-white">Josue D.</p>
+                                    <p className="text-xs text-nexus-accent font-semibold">Administrador Global</p>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
+
+                    {/* ÁREA PRINCIPAL (MAIN CONTENT) */}
+                    <main className="flex-1 bg-[#0b1120] relative overflow-hidden flex flex-col">
+                        {/* Topbar */}
+                        <header className="h-20 bg-nexus-900/50 backdrop-blur-md border-b border-nexus-800 flex items-center justify-between px-8 z-10">
+                            <div>
+                                <h2 className="text-2xl font-black text-white">{modules.find(m => m.id === activeMenu)?.title}</h2>
+                                <p className="text-sm text-slate-400 mt-1">Selecciona una subcategoría para comenzar</p>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="px-4 py-2 bg-nexus-800 rounded-lg border border-nexus-700 text-sm font-bold text-slate-300 flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-nexus-accent animate-pulse"></div>
+                                    Sucursal Matriz Online
+                                </div>
+                            </div>
+                        </header>
+
+                        {/* Content Placeholder */}
+                        <div className="flex-1 p-8 overflow-y-auto">
+                            <div className="w-full h-full border-2 border-dashed border-nexus-800 rounded-3xl flex flex-col items-center justify-center bg-nexus-900/20">
+                                <Icon name={modules.find(m => m.id === activeMenu)?.icon} className="w-20 h-20 text-nexus-800 mb-6" />
+                                <h3 className="text-2xl font-black text-slate-600">Módulo en Construcción</h3>
+                                <p className="text-slate-500 mt-2 max-w-md text-center">Aquí se cargará la interfaz de React conectada a la base de datos ultrarrápida (SQLite/Rust).</p>
+                                
+                                {activeMenu === 'operacion' && (
+                                    <button className="mt-8 px-6 py-3 bg-nexus-accent hover:bg-emerald-400 text-white font-black rounded-xl shadow-lg shadow-nexus-accent/20 transition-all">
+                                        ABRIR TERMINAL POS AHORA
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

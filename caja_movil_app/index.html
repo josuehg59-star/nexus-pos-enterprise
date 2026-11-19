@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>NEXUS POS MÓVIL</title>
+    <script>
+      // Polyfill crítico para Android WebView (Object.hasOwn, at, replaceAll)
+      if (typeof Object.hasOwn !== 'function') {
+        Object.hasOwn = function(object, property) {
+          if (object == null) throw new TypeError('Cannot convert undefined or null to object');
+          return Object.prototype.hasOwnProperty.call(object, property);
+        };
+      }
+      if (typeof Array.prototype.at !== 'function') {
+        Array.prototype.at = function(n) {
+          n = Math.trunc(n) || 0;
+          if (n < 0) n += this.length;
+          if (n < 0 || n >= this.length) return undefined;
+          return this[n];
+        };
+      }
+      if (typeof String.prototype.replaceAll !== 'function') {
+        String.prototype.replaceAll = function(searchValue, replaceValue) {
+          if (searchValue instanceof RegExp) {
+            if (!searchValue.global) throw new TypeError('replaceAll must be called with a global RegExp');
+            return this.replace(searchValue, replaceValue);
+          }
+          return this.split(searchValue).join(replaceValue);
+        };
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

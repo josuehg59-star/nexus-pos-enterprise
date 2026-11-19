@@ -1,0 +1,1073 @@
+[
+  {
+    "sku": "7501055305742",
+    "name": "AGUA CIEL MINERALIZADA 2 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 26.75,
+    "price": 31,
+    "stock": 5
+  },
+  {
+    "sku": "7501055308248",
+    "name": "AGUA CIEL MINERALIZADA 600 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 16.67,
+    "price": 20,
+    "stock": 4
+  },
+  {
+    "sku": "7501055310883",
+    "name": "AGUA CIEL PURIFICADA BOTTLE 1 LTS NR",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 6.67,
+    "price": 16,
+    "stock": 24
+  },
+  {
+    "sku": "7501055304721",
+    "name": "AGUA CIEL PURIFICADA BOTTLE 1.5 LTS NR",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 16.67,
+    "price": 19,
+    "stock": 13
+  },
+  {
+    "sku": "7501055307906",
+    "name": "AGUA CIEL PURIFICADA BOTTLE 600 ML NR",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 10.83,
+    "price": 13,
+    "stock": 6
+  },
+  {
+    "sku": "021136010541",
+    "name": "TOPO CHICO AGUA MINERAL NATURAL CARBONATADA 600 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 19.33,
+    "price": 22,
+    "stock": 5
+  },
+  {
+    "sku": "999966671",
+    "name": "ARETES O ANILLOS VARIOS MODELO",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 0.75,
+    "price": 1,
+    "stock": 23
+  },
+  {
+    "sku": "613008772840",
+    "name": "ARIZONA LATA SANDIA 570 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 17.7,
+    "price": 21,
+    "stock": 26
+  },
+  {
+    "sku": "9999041",
+    "name": "BOLSA DE REGALO MED",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 6,
+    "price": 8,
+    "stock": 3
+  },
+  {
+    "sku": "746171034623",
+    "name": "CACAHUATE BOLSA 10 GRS",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 5,
+    "price": 10,
+    "stock": 0
+  },
+  {
+    "sku": "7501032485047",
+    "name": "CARIBE COOLER 300 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 21.67,
+    "price": 25,
+    "stock": 18
+  },
+  {
+    "sku": "75004780",
+    "name": "CARRILLERA EL FUERTE",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 15.69,
+    "price": 25,
+    "stock": 11
+  },
+  {
+    "sku": "7501011143999",
+    "name": "MOÑOS DE REGALOS",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 0.8,
+    "price": 1,
+    "stock": 3
+  },
+  {
+    "sku": "759684431050",
+    "name": "ACETONA & QUITA ESMALTE VARIOS 50 ML",
+    "category": "FARMACIA",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 15,
+    "price": 25,
+    "stock": 3
+  },
+  {
+    "sku": "7502271917405",
+    "name": "CHTE SNIKETS 48 GR",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 17,
+    "price": 21,
+    "stock": 0
+  },
+  {
+    "sku": "7501055355310",
+    "name": "REFRESCO COCA COLA 250 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 10.58,
+    "price": 12,
+    "stock": 4
+  },
+  {
+    "sku": "75062835",
+    "name": "DESODORANTE DOVE 45 GR",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 46,
+    "price": 60,
+    "stock": 0
+  },
+  {
+    "sku": "7509546684741",
+    "name": "DESODORANTE LADY SPEED STICK DERMA 60 GR",
+    "category": "FARMACIA",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 48,
+    "price": 55,
+    "stock": 1
+  },
+  {
+    "sku": "7501027286000",
+    "name": "DESODORANTE OBAO VARIOS AROMAS ROLL-ON",
+    "category": "FARMACIA",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 29,
+    "price": 35,
+    "stock": 14
+  },
+  {
+    "sku": "7791293025797",
+    "name": "DESODORANTES AXE AERO SOL VARIOS",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 50,
+    "price": 70,
+    "stock": 4
+  },
+  {
+    "sku": "99992236",
+    "name": "DULCES CONFITADO BOLSA",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 5,
+    "price": 10,
+    "stock": 5
+  },
+  {
+    "sku": "7501055317875",
+    "name": "FUZE TEA 600 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 20.83,
+    "price": 24,
+    "stock": 6
+  },
+  {
+    "sku": "75010564969",
+    "name": "GELATINAS VARIOS SABORES",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 5.17,
+    "price": 8,
+    "stock": 10
+  },
+  {
+    "sku": "7501020554892",
+    "name": "JGO JUMEX LITRO",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 26.46,
+    "price": 32,
+    "stock": 8
+  },
+  {
+    "sku": "7501055333851",
+    "name": "JGO VALLE 1 LT DIFERENTES SABORES PLASTICO",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 24,
+    "price": 31,
+    "stock": 8
+  },
+  {
+    "sku": "7501055382224",
+    "name": "JGO VALLE 946 ML SABORES",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 24,
+    "price": 29,
+    "stock": 1
+  },
+  {
+    "sku": "7501055334018",
+    "name": "JGO VALLE MEGALATA DURAZNO 453 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 17.5,
+    "price": 20,
+    "stock": 11
+  },
+  {
+    "sku": "7501055334001",
+    "name": "JGO VALLE MEGALATA MANGO 453",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 17.5,
+    "price": 20,
+    "stock": 5
+  },
+  {
+    "sku": "7501055356911",
+    "name": "JGO VALLE SURTIDO 237 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 6.25,
+    "price": 10,
+    "stock": 9
+  },
+  {
+    "sku": "032239052017",
+    "name": "JUGO VALLE DURAZNO 413 ML VIDRIO",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 17.5,
+    "price": 20,
+    "stock": 3
+  },
+  {
+    "sku": "032239052000",
+    "name": "JUGO VALLE MANGO 413 ML VIDRIO",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 17.5,
+    "price": 20,
+    "stock": 4
+  },
+  {
+    "sku": "7501055377213",
+    "name": "LECHE SANTA CLARA CAPUCCINO 180 ML",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 12.5,
+    "price": 15,
+    "stock": 1
+  },
+  {
+    "sku": "7501055377183",
+    "name": "LECHE SANTA CLARA CHTE 180 ML",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 12.5,
+    "price": 15,
+    "stock": 6
+  },
+  {
+    "sku": "7501295600157",
+    "name": "LECHE SANTA CLARA DESLACTOSADA 1 LT",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 29.84,
+    "price": 33,
+    "stock": 9
+  },
+  {
+    "sku": "7501055377206",
+    "name": "LECHE SANTA CLARA VAINILLA 180 ML",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 12.5,
+    "price": 15,
+    "stock": 1
+  },
+  {
+    "sku": "7503006698309",
+    "name": "MICRODACYN 60 ML",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 90,
+    "price": 100,
+    "stock": 1
+  },
+  {
+    "sku": "9999043",
+    "name": "MOÑOS GRANDES VARIOS COLORES",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 0.75,
+    "price": 1,
+    "stock": 0
+  },
+  {
+    "sku": "999966670",
+    "name": "PAPAS CASERA 250 GRS",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 16,
+    "price": 25,
+    "stock": 0
+  },
+  {
+    "sku": "38000846755",
+    "name": "PAPAS PRINGLES QUESO 40GR",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 17.99,
+    "price": 21,
+    "stock": 0
+  },
+  {
+    "sku": "999014",
+    "name": "PAPEL DE REGALO NUEVAS YUMI",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 13,
+    "price": 18,
+    "stock": 1
+  },
+  {
+    "sku": "7501073800908",
+    "name": "PEÑAFIEL AGUA MINERAL 2 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 26.37,
+    "price": 32,
+    "stock": 3
+  },
+  {
+    "sku": "7501073830509",
+    "name": "PEÑAFIEL AGUA MINERAL 600 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 17,
+    "price": 21,
+    "stock": 12
+  },
+  {
+    "sku": "7501073839892",
+    "name": "PEÑAFIEL LIMONADA /SANGRIA/MANZANITA 2 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 31.5,
+    "price": 35,
+    "stock": 6
+  },
+  {
+    "sku": "7501005102674",
+    "name": "JUGO ADES SABOR SOYA Y MANZANA 946 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 29.33,
+    "price": 32,
+    "stock": 3
+  },
+  {
+    "sku": "7501073839861",
+    "name": "PEÑAFIEL NARANJANADA 2 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 31.5,
+    "price": 36,
+    "stock": 2
+  },
+  {
+    "sku": "7501073841949",
+    "name": "PEÑAFIEL PIÑADA 2 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 31.5,
+    "price": 36,
+    "stock": 4
+  },
+  {
+    "sku": "7501055317653",
+    "name": "POWER MORA 1 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 24,
+    "price": 35,
+    "stock": 9
+  },
+  {
+    "sku": "7501055329267",
+    "name": "POWER MORA 500 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 21.67,
+    "price": 26,
+    "stock": 4
+  },
+  {
+    "sku": "7501055317660",
+    "name": "POWER PONCHE DE FRUTAS 1 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 24,
+    "price": 35,
+    "stock": 6
+  },
+  {
+    "sku": "7501055329298",
+    "name": "POWER PONCHE DE FRUTAS 500 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 21.5,
+    "price": 26,
+    "stock": 2
+  },
+  {
+    "sku": "9002490100070",
+    "name": "RED BULL 250 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 38,
+    "price": 39,
+    "stock": 0
+  },
+  {
+    "sku": "7501055371655",
+    "name": "REFRESCO COCA COLA 1.35 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 34.42,
+    "price": 38,
+    "stock": 1
+  },
+  {
+    "sku": "7501055313532",
+    "name": "REFRESCO COCA COLA 1.75 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 39,
+    "price": 42,
+    "stock": 4
+  },
+  {
+    "sku": "7501055310227",
+    "name": "REFRESCO COCA COLA 2.5 LTS RETORNABLE",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 39.75,
+    "price": 44,
+    "stock": 5
+  },
+  {
+    "sku": "7501055304745",
+    "name": "REFRESCO COCA COLA 3 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 47.75,
+    "price": 53,
+    "stock": 13
+  },
+  {
+    "sku": "75007614",
+    "name": "REFRESCO COCA COLA 600 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 19.42,
+    "price": 21,
+    "stock": 20
+  },
+  {
+    "sku": "7501055387908",
+    "name": "REFRESCO COCA COLA BACARDI 355 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 26.17,
+    "price": 30,
+    "stock": 5
+  },
+  {
+    "sku": "7501055332175",
+    "name": "REFRESCO COCA COLA CHUBY 355 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 13.33,
+    "price": 15,
+    "stock": 11
+  },
+  {
+    "sku": "7501055356256",
+    "name": "REFRESCO COCA COLA CHUBY S/A 355 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 8.75,
+    "price": 10,
+    "stock": 9
+  },
+  {
+    "sku": "7501055361540",
+    "name": "REFRESCO COCA COLA LATA 355 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 20.42,
+    "price": 23,
+    "stock": 9
+  },
+  {
+    "sku": "7501055320639",
+    "name": "REFRESCO COCA COLA SIN AZUCAR 600 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 18.58,
+    "price": 20,
+    "stock": 8
+  },
+  {
+    "sku": "7501055300952",
+    "name": "REFRESCO COCA COLA VIDRIO 1.25 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 26.5,
+    "price": 29,
+    "stock": 10
+  },
+  {
+    "sku": "75004699",
+    "name": "REFRESCO COCA COLA VIDRIO 500 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 15.04,
+    "price": 17,
+    "stock": 5
+  },
+  {
+    "sku": "7501055308507",
+    "name": "REFRESCO FANTA DURAZNO 600 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 18.33,
+    "price": 21,
+    "stock": 0
+  },
+  {
+    "sku": "7501055310586",
+    "name": "REFRESCO FANTA FRESA 3 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 42,
+    "price": 46,
+    "stock": 0
+  },
+  {
+    "sku": "7501055305230",
+    "name": "REFRESCO FANTA FRESA 600 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 18.33,
+    "price": 21,
+    "stock": 0
+  },
+  {
+    "sku": "7501055303878",
+    "name": "REFRESCO FANTA NARANJA 2 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 32.5,
+    "price": 35,
+    "stock": 3
+  },
+  {
+    "sku": "7501055304790",
+    "name": "REFRESCO FANTA NARANJA 3 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 42,
+    "price": 46,
+    "stock": 4
+  },
+  {
+    "sku": "7501055303779",
+    "name": "REFRESCO FANTA NARANJA 600 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 18.33,
+    "price": 21,
+    "stock": 9
+  },
+  {
+    "sku": "7501055317455",
+    "name": "REFRESCO FANTA PIÑA 3 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 42,
+    "price": 46,
+    "stock": 3
+  },
+  {
+    "sku": "7501055311149",
+    "name": "REFRESCO FANTA PIÑA 600 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 18.33,
+    "price": 21,
+    "stock": 4
+  },
+  {
+    "sku": "7501055317462",
+    "name": "REFRESCO FANTA UVA 3 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 42,
+    "price": 46,
+    "stock": 2
+  },
+  {
+    "sku": "7501055302611",
+    "name": "REFRESCO FANTA UVA 600 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 18.33,
+    "price": 21,
+    "stock": 5
+  },
+  {
+    "sku": "7501055303885",
+    "name": "REFRESCO FRESCA 2 LITROS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 32.5,
+    "price": 35,
+    "stock": 0
+  },
+  {
+    "sku": "7501055304813",
+    "name": "REFRESCO FRESCA 3 LITROS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 42,
+    "price": 46,
+    "stock": 4
+  },
+  {
+    "sku": "7501055303786",
+    "name": "REFRESCO FRESCA 600 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 18.33,
+    "price": 21,
+    "stock": 6
+  },
+  {
+    "sku": "7501031311682",
+    "name": "REFRESCO PEPSI 1.5 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 26.25,
+    "price": 29,
+    "stock": 17
+  },
+  {
+    "sku": "7501031310098",
+    "name": "REFRESCO PEPSI 3 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 42.88,
+    "price": 47,
+    "stock": 3
+  },
+  {
+    "sku": "7501055377022",
+    "name": "REFRESCO SENZAO 2 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 32.5,
+    "price": 36,
+    "stock": 5
+  },
+  {
+    "sku": "7501055308330",
+    "name": "REFRESCO SENZAO 600 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 18.34,
+    "price": 21,
+    "stock": 10
+  },
+  {
+    "sku": "750105534002",
+    "name": "REFRESCO SIDRAL MUNDED MAZANA 2 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 32.5,
+    "price": 36,
+    "stock": 2
+  },
+  {
+    "sku": "7501055340422",
+    "name": "REFRESCO SIDRAL MUNDET 3 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 42,
+    "price": 46,
+    "stock": 1
+  },
+  {
+    "sku": "7501055376681",
+    "name": "REFRESCO SIDRAL MUNDET KIWI 2 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 25,
+    "price": 32,
+    "stock": 1
+  },
+  {
+    "sku": "7501055339983",
+    "name": "REFRESCO SIDRAL MUNDET MZNA 600 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 18.33,
+    "price": 21,
+    "stock": 0
+  },
+  {
+    "sku": "7501055304806",
+    "name": "REFRESCO SPRITE 3 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 42,
+    "price": 46,
+    "stock": 4
+  },
+  {
+    "sku": "7501055305629",
+    "name": "REFRESCO SPRITE 600 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 18.33,
+    "price": 21,
+    "stock": 1
+  },
+  {
+    "sku": "7501055320660",
+    "name": "REFRESCO COCA COLA ZERO 2 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 22,
+    "price": 30,
+    "stock": 3
+  },
+  {
+    "sku": "7509546017808",
+    "name": "SUAVITEL FRESCA PRIMAVERA 450 ML",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 16,
+    "price": 19,
+    "stock": 3
+  },
+  {
+    "sku": "7501125144851",
+    "name": "SUERO ELECTROLIC SURTIDOS 625 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 20.25,
+    "price": 24,
+    "stock": 25
+  },
+  {
+    "sku": "7501055330461",
+    "name": "VALLE FRUT PON CITRUS 2 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 32.5,
+    "price": 36,
+    "stock": 7
+  },
+  {
+    "sku": "7503027753629",
+    "name": "VOLT YELLOW ENERGY",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 15.33,
+    "price": 21,
+    "stock": 30
+  },
+  {
+    "sku": "7501020570854",
+    "name": "YOMI LALA CHOCOLATE 180 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 9.5,
+    "price": 14,
+    "stock": 0
+  },
+  {
+    "sku": "7501020570861",
+    "name": "YOMI LALA SABOR FRESA 180 ML",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 8,
+    "price": 14,
+    "stock": 2
+  },
+  {
+    "sku": "7501020570878",
+    "name": "YOMI LALA SABOR VAINILLA 180 ML",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 10,
+    "price": 13,
+    "stock": 2
+  },
+  {
+    "sku": "7501055377190",
+    "name": "LECHE SANTA CLARA FRESA 180 ML",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 12.5,
+    "price": 15,
+    "stock": 5
+  },
+  {
+    "sku": "7501055389100",
+    "name": "REFRESCO SENZAO 3 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 42,
+    "price": 47,
+    "stock": 3
+  },
+  {
+    "sku": "7590002012468",
+    "name": "VAPORUB VICK TARRO 100 GR",
+    "category": "FARMACIA",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 85,
+    "price": 100,
+    "stock": 0
+  },
+  {
+    "sku": "7506174512200",
+    "name": "CHTE MILKYWAY 48 GR",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 17,
+    "price": 21,
+    "stock": 1
+  },
+  {
+    "sku": "194735057313",
+    "name": "PATINETAS HOLEKEELS",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 35,
+    "price": 75,
+    "stock": 2
+  },
+  {
+    "sku": "7501055330812",
+    "name": "VALLE FRUT 3 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 42.5,
+    "price": 47,
+    "stock": 4
+  },
+  {
+    "sku": "7501073839212",
+    "name": "PEÑAFIEL MINERAL TWIST 1 LT",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 21.25,
+    "price": 24,
+    "stock": 6
+  },
+  {
+    "sku": "7501055389636",
+    "name": "REFRESCO AMEYAL MANZANA DURAZNO 600 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 0,
+    "price": 21,
+    "stock": 0
+  },
+  {
+    "sku": "7501013106824",
+    "name": "JGO BIDA VARIOS SABORES 234 ML",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 7.58,
+    "price": 9,
+    "stock": 23
+  },
+  {
+    "sku": "7501055304691",
+    "name": "REFRESCO DELAWARE PUNCH UVA 2 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 32.5,
+    "price": 37,
+    "stock": 2
+  },
+  {
+    "sku": "75078911",
+    "name": "JGO JUMEX VARIOS SABORES 200 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 5,
+    "price": 10,
+    "stock": 0
+  },
+  {
+    "sku": "7501055310487",
+    "name": "AGUA CIEL 5 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 31.75,
+    "price": 43,
+    "stock": 2
+  },
+  {
+    "sku": "070847035916",
+    "name": "MOSTER ENERGY 473 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 31.75,
+    "price": 36,
+    "stock": 3
+  },
+  {
+    "sku": "7501086802753",
+    "name": "AGUA EPURA 20 LTS",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 44,
+    "price": 50,
+    "stock": 1
+  },
+  {
+    "sku": "7501022016268",
+    "name": "REFRESCO SANGRIA CASERA 2.75 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 39.38,
+    "price": 45,
+    "stock": 4
+  },
+  {
+    "sku": "7501441604121",
+    "name": "REFRESCO JARRITOS PIÑA 2 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 26.25,
+    "price": 30,
+    "stock": 3
+  },
+  {
+    "sku": "75010221015292",
+    "name": "REFRESCO MIRINDA 1.5 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 26.25,
+    "price": 30,
+    "stock": 5
+  },
+  {
+    "sku": "75010220099857",
+    "name": "GATORADE FIERCE MORAS 1 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 29.58,
+    "price": 37,
+    "stock": 5
+  },
+  {
+    "sku": "036731326003",
+    "name": "GATORADE PONCHE DE FRUTAS 1 LTS",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 29.58,
+    "price": 37,
+    "stock": 6
+  },
+  {
+    "sku": "7501055900039",
+    "name": "LECHE ALPURA CLASICA 1 LTS",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 27.58,
+    "price": 32,
+    "stock": 4
+  },
+  {
+    "sku": "7501055901425",
+    "name": "LECHE ALPURA DESLACTOZADA 1 LTS",
+    "category": "Abarrotes",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 28.5,
+    "price": 33,
+    "stock": 6
+  },
+  {
+    "sku": "7501031310012",
+    "name": "REFRESCO PEPSI 600 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 17.5,
+    "price": 20,
+    "stock": 5
+  },
+  {
+    "sku": "7501055392766",
+    "name": "TOPO CHICO NARANJADA 600 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 14.93,
+    "price": 20,
+    "stock": 7
+  },
+  {
+    "sku": "7501055392759",
+    "name": "TOPO CHICO LIMONADA 600 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 14.93,
+    "price": 20,
+    "stock": 4
+  },
+  {
+    "sku": "7501055917761",
+    "name": "YOGHURT ALPURA FRESA 220 ML",
+    "category": "Bebidas",
+    "supplier": "COCA COLA-- FEMSA (FOMENTO ECONÓMICO MEXICANO, S.A.B. DE C.V.)",
+    "cost": 12.84,
+    "price": 15,
+    "stock": 2
+  }
+]

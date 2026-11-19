@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CONTROL INDEPENDIENTE - COCA COLA FEMSA</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./xlsx.full.min.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; background-color: #0b1120; color: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  </style>
+</head>
+<body class="p-2 sm:p-4 md:p-6 pb-24 min-h-screen">
+  <div class="max-w-7xl mx-auto space-y-4">
+    
+    <!-- ENCABEZADO FIJO ELEGANTE -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-5 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-red-500/20 text-red-400 border border-red-500/30">
+            COCA COLA-- FEMSA
+          </span>
+          <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" id="badgeStockHeader">
+            119 PRODUCTOS EN CATÁLOGO
+          </span>
+        </div>
+        <h1 class="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+          <span>CONTROL DE EFECTIVO Y COMPRAS</span>
+        </h1>
+      </div>
+
+      <!-- SELECTOR DE FECHA RÁPIDO -->
+      <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+        <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-black">
+          <button id="btnModoHoy" onclick="irAFecha('HOY')" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white">HOY</button>
+          <button id="btnModoAyer" onclick="irAFecha('AYER')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">AYER</button>
+          <button id="btnModoMes" onclick="setModo('MES')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">ESTE MES</button>
+          <button id="btnModoAcum" onclick="setModo('ACUMULADO')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">TODO</button>
+        </div>
+        <input type="date" id="inputFecha" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-white focus:outline-none focus:border-emerald-500" onchange="onFechaManualChange()">
+        <button onclick="sincronizarConPOS(false)" class="bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1 shadow-lg shadow-red-600/30 active:scale-95 transition-all" title="Recargar ventas del POS ahora">
+          ⚡ ACTUALIZAR
+        </button>
+      </div>
+    </div>
+
+    <!-- BARRA DE ESTADO DE CONEXIÓN AL POS -->
+    <div class="bg-slate-900/90 border border-slate-800/80 rounded-xl px-3 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+      <div class="flex items-center gap-2">
+        <span class="relative flex h-2.5 w-2.5">
+          <span id="syncDotPing" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span id="syncDot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+        </span>
+        <span id="lblSyncStatus" class="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-black">EN LÍNEA (192.168.100.38)</span>
+        <span class="text-[11px] text-slate-400 hidden sm:inline" id="lblSyncDetail">Ventas de caja y compras sincronizadas en vivo.</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-slate-500 text-[10px]">IP:</span>
+        <input type="text" id="inputPosIp" value="192.168.100.38" class="bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-slate-300 font-mono text-[11px] w-28 focus:outline-none" onchange="guardarIpConfig()">
+        <button onclick="toggleModalVentas()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-lg text-[11px] font-black active:scale-95 transition-all">
+          📋 Tickets POS
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL DETALLE DE VENTAS DE COCA COLA DEL POS -->
+    <div id="modalVentas" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-2xl space-y-3">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+        <h3 class="text-sm font-black text-white uppercase flex items-center gap-2">
+          <span>🧾 TICKETS DE COCA-COLA COBRADOS EN CAJA</span>
+          <span id="lblCountVentasModal" class="bg-emerald-500/20 text-emerald-400 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+        </h3>
+        <button onclick="toggleModalVentas()" class="text-slate-400 hover:text-white font-black text-sm">✕ CERRAR</button>
+      </div>
+      <div class="overflow-x-auto max-h-72 custom-scrollbar">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-950 text-slate-400 text-[10px] font-black uppercase">
+            <tr>
+              <th class="p-2">HORA</th>
+              <th class="p-2">FOLIO</th>
+              <th class="p-2">CAJA</th>
+              <th class="p-2">PRODUCTO</th>
+              <th class="p-2 text-center">PZAS</th>
+              <th class="p-2 text-right">PRECIO</th>
+              <th class="p-2 text-right">IMPORTE</th>
+            </tr>
+          </thead>
+          <tbody id="tablaVentasModalBody" class="divide-y divide-slate-800 font-semibold text-slate-200">
+            <!-- Ventas inyectadas -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SELECTOR DE PESTAÑAS PRINCIPALES (BARRA SUPERIOR INTERACTIVA) -->
+    <div class="grid grid-cols-3 gap-2 bg-slate-900/90 border border-slate-800 p-1.5 rounded-2xl shadow-lg">
+      <button id="tabBtnCaja" onclick="cambiarPestana('caja')" class="py-2.5 px-2 rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-1.5 transition-all bg-emerald-600 text-white shadow-lg shadow-emerald-950/40">
+        <span>📊</span>
+        <span>1. CAJA Y ARQUEO</span>
+      </button>
+      <button id="tabBtnCompras" onclick="cambiarPestana('compras')" class="py-2.5 px-2 rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-1.5 transition-all text-slate-400 hover:text-white">
+        <span>📥</span>
+        <span>2. COMPRAS Y GASTOS</span>
+      </button>
+      <button id="tabBtnCatalogo" onclick="cambiarPestana('catalogo')" class="py-2.5 px-2 rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-1.5 transition-all text-slate-400 hover:text-white">
+        <span>🥤</span>
+        <span>3. CATÁLOGO STOCK</span>
+      </button>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- PESTAÑA 1: CAJA Y ARQUEO (RESUMEN FINANCIERO DEL DÍA)     -->
+    <!-- ======================================================== -->
+    <div id="vistaCaja" class="space-y-4">
+      
+      <!-- GRAN TARJETA DESTACADA: TOTAL EN CAJA -->
+      <div class="bg-gradient-to-br from-emerald-950/50 via-slate-900 to-slate-900 border-2 border-emerald-500/80 rounded-3xl p-5 sm:p-6 shadow-2xl relative overflow-hidden">
+        <div class="flex justify-between items-center mb-1">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-black text-emerald-400 uppercase tracking-wider">TOTAL NETO EN CAJA</span>
+            <span class="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-black uppercase">A FAVOR (+)</span>
+          </div>
+          <span class="text-[11px] text-slate-400 font-mono font-bold" id="lblFechaCorteTexto">HOY</span>
+        </div>
+        
+        <div class="text-3xl sm:text-5xl font-black text-emerald-400 my-2" id="lblEfectivoDisponible">+$0.00</div>
+        
+        <div class="bg-slate-950/80 border border-emerald-500/30 rounded-xl p-2.5 text-xs text-emerald-300 font-mono" id="lblFormulaDisponible">
+          ($0.00 Ventas + $0.00 Efectivo) - $0.00 Compras - $0.00 Gastos
+        </div>
+
+        <div class="mt-3 flex flex-wrap items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800/80">
+          <span>Fórmula de negocio oficial de Coca-Cola FEMSA</span>
+          <button onclick="copiarResumenCorte()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1">
+            📋 Copiar Resumen del Día
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 TARJETAS DE DESGLOSE -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        
+        <!-- 1. VENTAS DEL DÍA -->
+        <div class="bg-slate-900 border border-emerald-500/30 rounded-2xl p-4 bg-gradient-to-br from-emerald-950/20 to-slate-900">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-[11px] font-black text-emerald-400 uppercase">1. Ventas del Día</span>
+            <span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-1 py-0.5 rounded font-black">+ SUMA</span>
+          </div>
+          <div class="text-xl sm:text-2xl font-black text-emerald-400" id="lblVentas">$0.00</div>
+          <div class="text-[10px] text-slate-400 font-semibold mt-1" id="lblPzsVendidas">0 pzs vendidas en caja</div>
+        </div>
+
+        <!-- 2. EFECTIVO QUE HAY EN MANO/CAJA -->
+        <div class="bg-slate-900 border border-blue-500/40 rounded-2xl p-4 bg-gradient-to-br from-blue-950/20 to-slate-900">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-[11px] font-black text-blue-400 uppercase">2. Efectivo que Hay</span>
+            <span class="text-[9px] bg-blue-500/20 text-blue-300 px-1 py-0.5 rounded font-black">+ SUMA</span>
+          </div>
+          <div class="flex items-center gap-1 mt-1">
+            <span class="text-base font-black text-blue-400">$</span>
+            <input type="number" step="0.01" id="inputEfectivoManual" placeholder="0.00" class="w-full bg-slate-950 border border-blue-500/40 rounded-lg px-2 py-1 text-sm font-black text-white focus:outline-none focus:border-blue-400" onchange="guardarEfectivoManual()">
+          </div>
+          <div class="flex justify-between items-center mt-2">
+            <span class="text-[10px] text-slate-400">En mano / cajón</span>
+            <button onclick="guardarEfectivoManual()" class="text-[9px] bg-blue-600 hover:bg-blue-500 text-white px-2 py-0.5 rounded font-black uppercase active:scale-95">💾 Guardar</button>
+          </div>
+        </div>
+
+        <!-- 3. COMPRAS AL CAMIÓN -->
+        <div class="bg-slate-900 border border-rose-500/30 rounded-2xl p-4 bg-gradient-to-br from-rose-950/20 to-slate-900">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-[11px] font-black text-rose-400 uppercase">3. Compras Camión</span>
+            <span class="text-[9px] bg-rose-500/20 text-rose-300 px-1 py-0.5 rounded font-black">- RESTA</span>
+          </div>
+          <div class="text-xl sm:text-2xl font-black text-rose-400" id="lblCompras">$0.00</div>
+          <div class="text-[10px] text-slate-400 font-semibold mt-1" id="lblPzsCompradas">0 entradas pagadas</div>
+        </div>
+
+        <!-- 4. OTROS GASTOS EN EFECTIVO -->
+        <div class="bg-slate-900 border border-amber-500/40 rounded-2xl p-4 bg-gradient-to-br from-amber-950/20 to-slate-900">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-[11px] font-black text-amber-400 uppercase">4. Otros Gastos</span>
+            <span class="text-[9px] bg-amber-500/20 text-amber-300 px-1 py-0.5 rounded font-black">- RESTA</span>
+          </div>
+          <div class="text-xl sm:text-2xl font-black text-amber-400" id="lblOtrosGastos">$0.00</div>
+          <div class="text-[10px] text-slate-400 font-semibold mt-1" id="lblCantGastos">0 pagos de hielo/comida</div>
+        </div>
+
+      </div>
+
+      <!-- ACCESO DIRECTO RÁPIDO A REGISTRO -->
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="text-xs text-slate-300">
+          ¿Llegó el camión o pagaste algún gasto? Registra la entrada de compra con su factura.
+        </div>
+        <div class="flex gap-2 w-full sm:w-auto">
+          <button onclick="cambiarPestana('compras')" class="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider shadow-lg active:scale-95 transition-all w-full sm:w-auto">
+            📥 + REGISTRAR FACTURA CAMIÓN
+          </button>
+          <button onclick="cambiarPestana('catalogo')" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider shadow-lg active:scale-95 transition-all w-full sm:w-auto">
+            🥤 VER CATÁLOGO STOCK
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- PESTAÑA 2: COMPRAS AL CAMIÓN Y GASTOS (ENTRADAS Y NOTAS) -->
+    <!-- ======================================================== -->
+    <div id="vistaCompras" class="hidden space-y-4">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
+        <!-- 1. ENTRADAS / COMPRAS AL CAMIÓN DE COCA-COLA -->
+        <div class="bg-slate-900 border border-rose-500/30 rounded-2xl p-4 sm:p-5 bg-gradient-to-b from-rose-950/20 to-slate-900 space-y-3">
+          <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+            <div>
+              <h2 class="text-xs font-black text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span>📥 1. REGISTRAR COMPRA / FACTURA DE COCA-COLA</span>
+              </h2>
+              <p class="text-[11px] text-slate-400">Resta automáticamente del total en caja al guardar.</p>
+            </div>
+            <span class="text-[10px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded font-black">- RESTA</span>
+          </div>
+          
+          <div class="space-y-2.5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <label class="text-[10px] font-bold text-slate-400 mb-0.5 block">No. de Entrada o Factura:</label>
+                <input type="text" id="compraFolio" placeholder="Ej. FAC-8921 ó 1042" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-rose-500">
+              </div>
+              <div>
+                <label class="text-[10px] font-bold text-slate-400 mb-0.5 block">Total Pagado al Camión ($):</label>
+                <input type="number" step="0.01" id="compraTotal" placeholder="0.00" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-rose-500">
+              </div>
+            </div>
+            <div>
+              <label class="text-[10px] font-bold text-slate-400 mb-0.5 block">Detalle de mercancía recibida:</label>
+              <input type="text" id="compraNotas" placeholder="Ej. 15 rejas Coca 600ml, 5 retornables, 3 Ciel 1.5L" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-rose-500">
+            </div>
+            <button onclick="registrarCompraRapida()" class="w-full bg-rose-600 hover:bg-rose-500 text-white py-2.5 rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-rose-600/30 active:scale-95 transition-all">
+              + GUARDAR COMPRA (SUMAR A FACTURAS)
+            </button>
+          </div>
+
+          <!-- LISTA DE ENTRADAS DE COMPRA REGISTRADAS HOY -->
+          <div id="seccionListaCompras" class="border-t border-slate-800/80 pt-3 space-y-2">
+            <div class="flex justify-between items-center text-xs font-black uppercase text-slate-300">
+              <span>ENTRADAS GUARDADAS PARA ESTA FECHA</span>
+              <span id="lblSumaComprasHeader" class="text-rose-400 font-mono font-black">$0.00</span>
+            </div>
+            <div class="max-h-48 overflow-y-auto custom-scrollbar">
+              <table class="w-full text-xs text-left">
+                <tbody id="tablaComprasBody" class="divide-y divide-slate-800/60 font-semibold text-slate-300">
+                  <!-- Compras inyectadas -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. REGISTRAR OTROS GASTOS EN EFECTIVO -->
+        <div class="bg-slate-900 border border-amber-500/30 rounded-2xl p-4 sm:p-5 bg-gradient-to-b from-amber-950/20 to-slate-900 space-y-3">
+          <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+            <div>
+              <h2 class="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span>💸 2. REGISTRAR OTROS GASTOS MANUALES</span>
+              </h2>
+              <p class="text-[11px] text-slate-400">Pagos menores de efectivo del día (hielo, pan, bolsas).</p>
+            </div>
+            <span class="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-black">- RESTA</span>
+          </div>
+          
+          <div class="space-y-2.5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <label class="text-[10px] font-bold text-slate-400 mb-0.5 block">Concepto del gasto:</label>
+                <input type="text" id="gastoConcepto" placeholder="Ej. Hielo, Bolsas, Comida" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-amber-500">
+              </div>
+              <div>
+                <label class="text-[10px] font-bold text-slate-400 mb-0.5 block">Monto Pagado ($):</label>
+                <input type="number" step="0.01" id="gastoTotal" placeholder="0.00" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-amber-500">
+              </div>
+            </div>
+            <div>
+              <label class="text-[10px] font-bold text-slate-400 mb-0.5 block">Detalle adicional:</label>
+              <input type="text" id="gastoDetalle" placeholder="Ej. Se compraron 2 bolsas de hielo para refrescos" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-amber-500">
+            </div>
+            <button onclick="registrarOtroGasto()" class="w-full bg-amber-600 hover:bg-amber-500 text-white py-2.5 rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-amber-600/30 active:scale-95 transition-all">
+              - DESCONTAR OTRO GASTO
+            </button>
+          </div>
+
+          <!-- LISTA DE GASTOS REGISTRADOS -->
+          <div id="seccionListaGastos" class="border-t border-slate-800/80 pt-3 space-y-2">
+            <div class="flex justify-between items-center text-xs font-black uppercase text-slate-300">
+              <span>GASTOS GUARDADOS PARA ESTA FECHA</span>
+              <span id="lblSumaGastosHeader" class="text-amber-400 font-mono font-black">$0.00</span>
+            </div>
+            <div class="max-h-48 overflow-y-auto custom-scrollbar">
+              <table class="w-full text-xs text-left">
+                <tbody id="tablaGastosBody" class="divide-y divide-slate-800/60 font-semibold text-slate-300">
+                  <!-- Gastos inyectados -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 3. VENTA MANUAL / SALIDA EXTRA (OPCIONAL) -->
+      <div class="bg-slate-900 border border-emerald-500/30 rounded-2xl p-4 bg-gradient-to-b from-emerald-950/10 to-slate-900">
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="text-xs font-black text-emerald-400 uppercase tracking-wider">📤 REGISTRAR VENTA MANUAL O SALIDA DE PRODUCTO (OPCIONAL)</h3>
+          <span class="text-[10px] text-slate-400">Si vendiste sin registrar en la caja del POS</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+          <select id="selectSalidaProd" class="sm:col-span-2 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2 text-xs font-bold text-white focus:border-emerald-500 truncate">
+            <!-- Opciones inyectadas -->
+          </select>
+          <input type="number" id="salidaCantidad" value="1" min="1" placeholder="Piezas" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2 text-xs font-bold text-white focus:border-emerald-500">
+          <button onclick="registrarSalida()" class="bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-xl text-xs font-black uppercase tracking-wider shadow active:scale-95 transition-all">
+            + REGISTRAR SALIDA
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- PESTAÑA 3: CATÁLOGO Y CONTROL DE STOCK (119 PRODUCTOS)   -->
+    <!-- ======================================================== -->
+    <div id="vistaCatalogo" class="hidden space-y-4">
+      
+      <!-- BARRA DE HERRAMIENTAS DEL CATÁLOGO -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+        <div>
+          <h2 class="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
+            <span>CATÁLOGO EXCLUSIVO: COCA COLA-- FEMSA</span>
+            <span class="bg-slate-800 text-emerald-400 text-xs px-2.5 py-0.5 rounded-full font-bold" id="lblTotalProd">119</span>
+          </h2>
+          <p class="text-xs text-slate-400 font-semibold">Existencias en refrigerador y almacén (Modifica directo o con los botones + / -)</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <!-- BUSCADOR EN VIVO -->
+          <input type="text" id="inputBuscador" placeholder="🔍 Buscar por nombre o SKU..." class="w-full sm:w-64 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs font-bold text-white focus:outline-none focus:border-emerald-500" onkeyup="filtrarProductos()">
+
+          <!-- SUBIR EXCEL -->
+          <label class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1 shadow-lg shadow-blue-600/30 cursor-pointer active:scale-95 transition-all" title="Actualiza existencias desde Excel">
+            <span>📥 SUBIR EXCEL</span>
+            <input type="file" id="fileExcel" accept=".xlsx, .xls, .csv" class="hidden" onchange="subirExcel(event)">
+          </label>
+
+          <!-- DESCARGAR EXCEL -->
+          <button onclick="exportarExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all">
+            📊 EXPORTAR EXCEL
+          </button>
+
+          <!-- AGREGAR PRODUCTO NUEVO -->
+          <button onclick="toggleFormNuevoProd()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1 active:scale-95 transition-all">
+            <span id="btnNuevoProdTexto">+ NUEVO</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- FORMULARIO DESPLEGABLE: AGREGAR PRODUCTO NUEVO -->
+      <div id="formNuevoProducto" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 hidden space-y-3">
+        <h3 class="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+          <span>➕ AGREGAR PRODUCTO NUEVO A LA LISTA DE COCA-COLA FEMSA</span>
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          <input type="text" id="nuevoSku" placeholder="SKU / Código de Barras" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-white focus:border-blue-500">
+          <input type="text" id="nuevoNombre" placeholder="Nombre del Producto" class="sm:col-span-2 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-white focus:border-blue-500">
+          <input type="number" step="0.01" id="nuevoCosto" placeholder="Costo Compra ($)" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-white focus:border-blue-500">
+          <input type="number" step="0.01" id="nuevoPrecio" placeholder="Precio Venta ($)" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-white focus:border-blue-500">
+          <input type="number" id="nuevoStock" placeholder="Existencias (Stock)" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-white focus:border-blue-500">
+        </div>
+        <div class="flex justify-end gap-2">
+          <button onclick="guardarNuevoProducto()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-600/30 active:scale-95 transition-all">
+            💾 GUARDAR EN LISTA DE COCA COLA
+          </button>
+        </div>
+      </div>
+
+      <!-- TABLA DE PRODUCTOS COCA COLA -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto max-h-[600px] custom-scrollbar">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-950/90 sticky top-0 text-[10px] font-black uppercase text-slate-400 tracking-wider border-b border-slate-800 z-10">
+              <tr>
+                <th class="p-3">SKU</th>
+                <th class="p-3">PRODUCTO</th>
+                <th class="p-3 text-right">COSTO</th>
+                <th class="p-3 text-right">PRECIO</th>
+                <th class="p-3 text-center">STOCK (EDITABLE)</th>
+                <th class="p-3 text-center">ACCIONES RÁPIDAS</th>
+                <th class="p-3 text-right">VALOR VENTA</th>
+              </tr>
+            </thead>
+            <tbody id="tablaProductosBody" class="divide-y divide-slate-800/60 font-semibold">
+              <!-- Filas inyectadas -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- NOTIFICACIÓN FLOTANTE TIPO TOAST -->
+    <div id="toastNotif" class="fixed bottom-5 right-5 z-50 transform translate-y-24 opacity-0 transition-all duration-300 bg-slate-900 text-white px-4 py-2.5 rounded-2xl shadow-2xl border border-emerald-500/40 text-xs font-bold flex items-center gap-2">
+      <span id="toastIcon">✅</span>
+      <span id="toastText">Operación exitosa</span>
+    </div>
+
+    <!-- PIE DE PÁGINA AUTOR -->
+    <div class="text-center text-xs text-slate-500 py-3 border-t border-slate-800/60">
+      <span class="font-black text-amber-400">JOSUE HERNANDEZ GUTIERREZ</span> | <span class="font-mono">TEL: 9612765041</span>
+    </div>
+
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
