@@ -10,6 +10,7 @@ import {
 import { useLiveQuery } from 'dexie-react-hooks';
 import { usePosStore, lineTotal } from '../store/useStore';
 import { useSettings } from '../store/useSettings';
+import { useLiveSyncStore } from '../store/liveSyncEngine';
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 import { LicenseModal } from '../components/LicenseModal';
 import { Camera } from 'lucide-react';
@@ -77,6 +78,7 @@ const CartRow = React.memo(({ item, onUpdateQuantity, onRemove, onFocusSearch }:
 });
 
 export default function PosTerminal() {
+  const { isOnline, pendingOfflineCount } = useLiveSyncStore();
   const [showMobileCheckoutModal, setShowMobileCheckoutModal] = useState(false);
   const { nombreNegocio, rfc, eslogan, telefono, direccion, mercadoPagoToken, mercadoPagoDeviceId, servidorIp, clipApiKey, clipSecretKey, clipSerialNumber, clipModo, logo, cajaNombre, activeUser, usersList, requirePasswordLogin, setSettings } = useSettings();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -925,11 +927,25 @@ export default function PosTerminal() {
             )}
           </div>
           
-          <div className="flex flex-col shrink min-w-0 max-w-[110px] sm:max-w-[200px]">
+          <div className="flex flex-col shrink min-w-0 max-w-[125px] sm:max-w-[200px]">
             <h1 className="font-black text-white tracking-wider text-xs uppercase truncate leading-tight">{nombreNegocio || 'NEXUS POS'}</h1>
-            <span className="text-[9px] font-bold text-slate-400 truncate">
-              {cajaNombre || 'CAJA MÓVIL'}
-            </span>
+            <div 
+              onClick={() => {
+                alert(`📡 ESTADO DE ENLACE NEXUS POS\n\n• Estado: ${isOnline ? '🟢 CONECTADO CON CAJA 1' : '🔴 MODO OFFLINE (SIN ENLACE)'}\n• Servidor IP: ${servidorIp || '192.168.100.38:3008'}\n• Ventas pendientes de sincronizar: ${pendingOfflineCount}\n\n* En modo offline puedes seguir cobrando con normalidad. En cuanto vuelva la señal Wi-Fi, todas las ventas se enviarán solas a la PC.`);
+              }}
+              className="flex items-center gap-1 cursor-pointer active:opacity-70 mt-0.5"
+              title="Estado de sincronización"
+            >
+              <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'}`} />
+              <span className={`text-[8.5px] font-black tracking-wider truncate uppercase ${isOnline ? 'text-emerald-400' : 'text-red-400'}`}>
+                {isOnline ? 'ENLACE PC ACTIVO' : 'MODO OFFLINE'}
+              </span>
+              {pendingOfflineCount > 0 && (
+                <span className="text-[7.5px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1 rounded-full font-mono shrink-0">
+                  {pendingOfflineCount} pend.
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

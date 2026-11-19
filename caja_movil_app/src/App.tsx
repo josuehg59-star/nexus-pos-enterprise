@@ -31,6 +31,7 @@ import { useSettings } from './store/useSettings';
 import { LicenseModal } from './components/LicenseModal';
 import { AutoUpdater } from './components/AutoUpdater';
 import { getLicenseInfo } from './utils/licenseManager';
+import { startLiveSyncEngine } from './store/liveSyncEngine';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -161,6 +162,8 @@ export function App() {
   useEffect(() => {
     setSidebarOpen(false);
     setMobileMenuOpen(false);
+    const stopSync = startLiveSyncEngine();
+    return () => stopSync();
   }, []);
 
   const renderContent = () => {

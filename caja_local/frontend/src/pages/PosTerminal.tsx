@@ -11,6 +11,7 @@ import {
 import { useLiveQuery } from 'dexie-react-hooks';
 import { usePosStore, lineTotal } from '../store/useStore';
 import { useSettings } from '../store/useSettings';
+import { useLiveSyncStore } from '../store/liveSyncEngine';
 import { db } from '../store/database';
 import { productIndex } from '../store/productIndex';
 import { playBeepSuccess, playBeepError } from '../utils/sound';
@@ -83,6 +84,7 @@ const CartRow = React.memo(({ item, onUpdateQuantity, onRemove, onFocusSearch }:
 });
 
 export default function PosTerminal() {
+  const { isOnline } = useLiveSyncStore();
   const { nombreNegocio, rfc, eslogan, telefono, direccion, mercadoPagoToken, mercadoPagoDeviceId, servidorIp, clipApiKey, clipSecretKey, clipSerialNumber, clipModo, logo, cajaNombre, activeUser, usersList, requirePasswordLogin, setSettings } = useSettings();
   const searchInputRef = useRef<HTMLInputElement>(null);
   
@@ -933,6 +935,10 @@ export default function PosTerminal() {
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black bg-blue-500/20 text-blue-400 border border-blue-500/30 tracking-wider">
                 💻 {cajaNombre || 'CAJA 1 - PRINCIPAL'}
+              </span>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black border tracking-wider ${isOnline ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-red-500/20 text-red-300 border-red-500/30'}`} title={isOnline ? 'Servidor de red multi-caja activo (:3008)' : 'Servidor 3008 no detectado'}>
+                <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+                {isOnline ? 'RED :3008' : 'LOCAL'}
               </span>
             </div>
           </div>

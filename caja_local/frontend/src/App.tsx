@@ -26,6 +26,7 @@ import Recargas from './pages/Recargas';
 import ImpresionEtiquetas from './pages/ImpresionEtiquetas';
 import LiquidacionProveedor from './pages/LiquidacionProveedor';
 import { db } from './store/database';
+import { startPcLiveSyncEngine } from './store/liveSyncEngine';
 
 const modules = [
   { 
@@ -111,6 +112,12 @@ function App() {
       setSidebarOpen(true);
     }
   };
+
+    // Iniciar motor de sincronización de red multi-caja en vivo (:3008)
+  useEffect(() => {
+    const stopSync = startPcLiveSyncEngine();
+    return () => stopSync();
+  }, []);
 
   // Asegurarnos de que el menú empiece colapsado si el default es POS
   useEffect(() => {
