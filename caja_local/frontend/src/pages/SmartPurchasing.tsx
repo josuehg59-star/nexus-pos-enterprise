@@ -22,6 +22,108 @@ export default function SmartPurchasing() {
   const [manualSearch, setManualSearch] = useState('');
   const [manualCart, setManualCart] = useState<(Product & { orderQty: number })[]>([]);
 
+  // NEGADOS / FALTANTES STATE (F4 en Caja)
+  const [negadosList, setNegadosList] = useState<any[]>([]);
+
+  const loadNegados = async () => {
+    try {
+      const local = JSON.parse(localStorage.getItem('nexus_productos_negados') || '[]');
+      if (Array.isArray(local) && local.length > 0) {
+        setNegadosList(local);
+        return;
+      }
+    } catch (e) {}
+
+    try {
+      const res = await fetch('http://127.0.0.1:3002/api/negados');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setNegadosList(data);
+          localStorage.setItem('nexus_productos_negados', JSON.stringify(data));
+        }
+      }
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    loadNegados();
+  }, [mode]);
+
+  const handleAddNegadoToManual = (item: any) => {
+    const qty = Number(item.requested_qty || item.total_qty_needed || 1);
+    const match = products.find(p => 
+      (item.sku && String(p.sku).trim() === String(item.sku).trim()) ||
+      (p.name && p.name.toLowerCase().trim() === item.name.toLowerCase().trim())
+    );
+
+    if (match) {
+      setManualCart(prev => {
+        const exists = prev.find(p => p.id === match.id);
+        if (exists) {
+          return prev.map(p => p.id === match.id ? { ...p, orderQty: (p.orderQty || 1) + qty } : p);
+        }
+        return [...prev, { ...match, orderQty: qty }];
+      });
+    } else {
+      const tempId = Math.floor(Math.random() * -100000);
+      const synth: Product & { orderQty: number } = {
+        id: tempId,
+        sku: item.sku || 'FALTANTE',
+        name: item.name,
+        category: 'Faltantes',
+        price: 0,
+        cost: 0,
+        stock: 0,
+        status: 'ACTIVO',
+        orderQty: qty
+      };
+      setManualCart(prev => {
+        const exists = prev.find(p => p.name === synth.name);
+        if (exists) {
+          return prev.map(p => p.name === synth.name ? { ...p, orderQty: (p.orderQty || 1) + qty } : p);
+        }
+        return [...prev, synth];
+      });
+    }
+
+    setToastMsg(`✓ Se agregó "${item.name}" (${qty} pz) a tu pedido manual`);
+    setTimeout(() => setToastMsg(null), 3000);
+  };
+
+  const handleAddAllNegadosToManual = () => {
+    if (!negadosList || negadosList.length === 0) return;
+    
+    negadosList.forEach(item => {
+      handleAddNegadoToManual(item);
+    });
+
+    setToastMsg(`✓ Se agregaron ${negadosList.length} productos faltantes solicitados en caja`);
+    setTimeout(() => setToastMsg(null), 3500);
+  };
+
+  const handleClearNegados = () => {
+    if (!window.confirm('¿Deseas marcar todos los faltantes registrados como atendidos/surtidos?')) return;
+    localStorage.removeItem('nexus_productos_negados');
+    setNegadosList([]);
+    fetch('http://127.0.0.1:3002/api/negados', { method: 'DELETE' }).catch(() => {});
+    setToastMsg('✓ Lista de faltantes de caja reiniciada.');
+    setTimeout(() => setToastMsg(null), 3000);
+  };
+
+  const handleDeleteSingleNegado = (item: any) => {
+    if (!window.confirm(`¿Marcar "${item.name}" como surtido y quitar de la lista de faltantes?`)) return;
+    const targetId = item.id;
+    const updated = negadosList.filter(n => (n.id && targetId ? n.id !== targetId : n.name !== item.name));
+    setNegadosList(updated);
+    localStorage.setItem('nexus_productos_negados', JSON.stringify(updated));
+    fetch(`http://127.0.0.1:3002/api/negados/${encodeURIComponent(targetId || item.name)}`, { method: 'DELETE' }).catch(() => {});
+    setToastMsg(`✓ "${item.name}" marcado como surtido y retirado.`);
+    setTimeout(() => setToastMsg(null), 2500);
+  };
+
+
+
   // Quantidades editadas manualmente por producto (id -> qty)
   const [customQuantities, setCustomQuantities] = useState<Record<number, number>>({});
 
@@ -906,7 +1008,72 @@ export default function SmartPurchasing() {
             )}
 
             {/* MANUAL SEARCH */}
-            {mode === 'MANUAL' && (
+            
+              {/* BANNER DE PRODUCTOS FALTANTES / NEGADOS EN CAJA (F4) */}
+              {mode === 'MANUAL' && negadosList.length > 0 && (
+                <div className="mx-4 mt-4 p-4 bg-amber-500/10 border border-amber-500/40 rounded-2xl shadow-lg">
+                  <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-black">
+                        <AlertTriangle className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="font-black text-amber-300 text-sm uppercase">Faltantes del Día Solicitados en Caja (F4)</h4>
+                        <p className="text-[11px] text-amber-200/70 font-medium">Clientes que pidieron estos productos en mostrador cuando estaban agotados</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleAddAllNegadosToManual}
+                        className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> AGREGAR TODOS AL PEDIDO
+                      </button>
+                      <button
+                        onClick={handleClearNegados}
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl border border-slate-700 transition-colors"
+                      >
+                        Marcar Surtidos
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                    {negadosList.map((item, idx) => {
+                      const qty = item.requested_qty || item.total_qty_needed || 1;
+                      return (
+                        <div key={idx} className="flex justify-between items-center bg-slate-900/90 border border-amber-500/20 px-3.5 py-2 rounded-xl">
+                          <div className="min-w-0 pr-2">
+                            <p className="font-black text-white text-xs uppercase truncate">{item.name}</p>
+                            <p className="text-[10px] text-slate-400 font-medium truncate">Proveedor: {item.supplier || 'Sin especificar'}</p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="px-2 py-0.5 bg-amber-400/20 border border-amber-400/30 text-amber-300 font-mono font-black text-xs rounded-lg">
+                              {qty} pz
+                            </span>
+                            <button
+                              onClick={() => handleAddNegadoToManual(item)}
+                              className="p-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors"
+                              title="Agregar este faltante al pedido"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSingleNegado(item)}
+                              className="p-1.5 bg-rose-600/80 hover:bg-rose-500 text-white rounded-lg transition-colors"
+                              title="Marcar como surtido y eliminar de la lista"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+{mode === 'MANUAL' && (
               <div className="p-4 border-b border-nexus-800 bg-nexus-900/50 relative">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />

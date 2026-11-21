@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generador Oficial de Licencias - NEXUS POS Enterprise</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #030712;
+      --card: #0f172a;
+      --border: #1e293b;
+      --primary: #10b981;
+      --accent: #f59e0b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    body {
+      background: radial-gradient(circle at top right, #0f291e, var(--bg) 60%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      backdrop-filter: blur(16px);
+      border-radius: 28px;
+      width: 100%;
+      max-width: 580px;
+      padding: 36px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(16, 185, 129, 0.15);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 28px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo-badge {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, #10b981, #047857);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      font-weight: 900;
+      color: white;
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+    }
+    .header-text h1 {
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      color: white;
+    }
+    .header-text p {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .dev-badge {
+      display: inline-block;
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+      margin-bottom: 24px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    input, select {
+      width: 100%;
+      background: #020617;
+      border: 1px solid #334155;
+      padding: 14px 16px;
+      border-radius: 14px;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      outline: none;
+      transition: all 0.2s;
+    }
+    input:focus, select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    }
+    .btn-generate {
+      width: 100%;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      border: none;
+      padding: 16px;
+      border-radius: 16px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.35);
+      transition: all 0.2s;
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .btn-generate:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px rgba(16, 185, 129, 0.45);
+    }
+    .btn-generate:active {
+      transform: translateY(0);
+    }
+    .result-box {
+      margin-top: 26px;
+      background: #020617;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      border-radius: 18px;
+      padding: 20px;
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .result-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .key-display {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 17px;
+      font-weight: 800;
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.1);
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px dashed rgba(16, 185, 129, 0.4);
+      text-align: center;
+      letter-spacing: 1.5px;
+      user-select: all;
+      word-break: break-all;
+    }
+    .actions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .btn-secondary {
+      background: #1e293b;
+      color: white;
+      border: 1px solid #334155;
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.2s;
+    }
+    .btn-secondary:hover {
+      background: #334155;
+    }
+    .btn-whatsapp {
+      background: #065f46;
+      border-color: #059669;
+      color: #a7f3d0;
+    }
+    .btn-whatsapp:hover {
+      background: #047857;
+    }
+    .footer-info {
+      margin-top: 28px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .footer-info strong {
+      color: #f59e0b;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <div class="logo-badge">N</div>
+      <div class="header-text">
+        <h1>NEXUS POS ENTERPRISE</h1>
+        <p>Generador Maestro de Licencias</p>
+      </div>
+    </div>
+
+    <div class="dev-badge">
+      👑 Panel Exclusivo para Josue Hernandez Gutierrez (Tel: 961 276 5041)
+    </div>
+
+    <div class="form-group">
+      <label for="clientName">Nombre del Cliente o Negocio:</label>
+      <input type="text" id="clientName" placeholder="Ej. Abarrotes La Bendición" value="Abarrotes Don Pepe">
+    </div>
+
+    <div class="form-group">
+      <label for="licenseType">Tipo de Licencia:</label>
+      <select id="licenseType">
+        <option value="PERMANENTE">VITALICIA / PERMANENTE (Recomendada)</option>
+        <option value="ANUAL">ANUAL (365 Días)</option>
+        <option value="SEMESTRAL">SEMESTRAL (180 Días)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="platform">Dispositivo de Destino:</label>
+      <select id="platform">
+        <option value="ALL">PC Windows y Móvil Android (Universal)</option>
+        <option value="PC">Sólo PC Windows</option>
+        <option value="MOVIL">Sólo Celular Android</option>
+      </select>
+    </div>
+
+    <button class="btn-generate" onclick="generateLicense()">
+      <span>⚡</span> GENERAR CLAVE DE ACTIVACIÓN
+    </button>
+
+    <div id="resultBox" class="result-box">
+      <div class="result-title">✅ Clave Oficial Generada con Éxito:</div>
+      <div class="key-display" id="keyDisplay">NEXUS-XXXX-XXXX-XXXX</div>
+      
+      <div class="actions-grid">
+        <button class="btn-secondary" onclick="copyKey()">
+          📋 Copiar Clave
+        </button>
+        <button class="btn-secondary btn-whatsapp" onclick="copyWhatsAppMessage()">
+          💬 Copiar para WhatsApp
+        </button>
+      </div>
+    </div>
+
+    <div class="footer-info">
+      <strong>Opción Express:</strong> También puedes activar la app de cualquier cliente ingresando directamente tu PIN Maestro: <span style="background:#1e293b; color:#38bdf8; font-family:monospace; padding:2px 8px; border-radius:6px; font-weight:800;">9612</span> en la ventana de Licencia.
+    </div>
+  </div>
+
+  <script>
+    function generateLicense() {
+      const client = document.getElementById('clientName').value.trim() || 'CLIENTE VIP';
+      const type = document.getElementById('licenseType').value;
+      const cleanName = client.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
+      
+      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      const generatedKey = `NEXUS-${cleanName}-${type.slice(0, 4)}-${randomSuffix}-9612`;
+
+      document.getElementById('keyDisplay').innerText = generatedKey;
+      document.getElementById('resultBox').style.display = 'block';
+    }
+
+    function copyKey() {
+      const key = document.getElementById('keyDisplay').innerText;
+      navigator.clipboard.writeText(key).then(() => {
+        alert('✅ ¡Clave copiada al portapapeles!\n\n' + key);
+      });
+    }
+
+    function copyWhatsAppMessage() {
+      const key = document.getElementById('keyDisplay').innerText;
+      const client = document.getElementById('clientName').value.trim() || 'Estimado Cliente';
+      const type = document.getElementById('licenseType').options[document.getElementById('licenseType').selectedIndex].text;
+      
+      const msg = `¡Hola ${client}! 👋\n\n` +
+        `Aquí tienes tu Clave Oficial de Activación para *NEXUS POS ENTERPRISE*:\n\n` +
+        `🔑 *CLAVE:* \`${key}\`\n` +
+        `📋 *TIPO:* ${type}\n\n` +
+        `*Instrucciones para activarlo en tu PC o Celular:*\n` +
+        `1. Abre el sistema NEXUS POS.\n` +
+        `2. En el menú lateral haz clic en *GESTIONAR LICENCIA* (o si la ventana te aparece en pantalla).\n` +
+        `3. Pega tu clave oficial y haz clic en *ACTIVAR LICENCIA PERMANENTE*.\n\n` +
+        `Soporte y Autor: Josué Hernández Gutiérrez\n` +
+        `Tuxtla Gutiérrez, Chiapas | Tel: 961 276 5041`;
+
+      navigator.clipboard.writeText(msg).then(() => {
+        alert('✅ ¡Mensaje listo para enviar por WhatsApp copiado al portapapeles!');
+      });
+    }
+  </script>
+</body>
+</html>

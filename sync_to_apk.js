@@ -2,7 +2,13 @@ const fs = require('fs');
 const path = require('path');
 
 const srcDir = path.join(__dirname, 'caja_movil_app', 'dist');
-const destDir = 'C:\\Users\\JOSUE\\Desktop\\SISTEMA_RETAILPOS_MOVIL\\app\\src\\main\\assets';
+
+let destDir = 'C:\\Users\\JOSUE\\Desktop\\proyectos no borrar\\SISTEMA_RETAILPOS_MAESTRO\\SISTEMA_RETAILPOS_MOVIL\\app\\src\\main\\assets';
+if (!fs.existsSync(path.dirname(destDir))) {
+  if (fs.existsSync('C:\\Users\\JOSUE\\Desktop\\SISTEMA_RETAILPOS_MOVIL\\app\\src\\main')) {
+    destDir = 'C:\\Users\\JOSUE\\Desktop\\SISTEMA_RETAILPOS_MOVIL\\app\\src\\main\\assets';
+  }
+}
 
 function copyRecursiveSync(src, dest) {
   const exists = fs.existsSync(src);
@@ -27,4 +33,4 @@ if (fs.existsSync(destDir)) {
 fs.mkdirSync(destDir, { recursive: true });
 
 copyRecursiveSync(srcDir, destDir);
-console.log('✅ Archivos de caja_movil_app/dist copiados exitosamente a SISTEMA_RETAILPOS_MOVIL/app/src/main/assets');
+console.log('✅ Archivos de caja_movil_app/dist copiados exitosamente a:\n' + destDir);

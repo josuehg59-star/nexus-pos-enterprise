@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { generateDirectTicketPDF } from '../utils/ticketPdf';
 import { db } from '../store/database';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useSettings } from '../store/useSettings';
@@ -150,6 +151,9 @@ export default function Reports() {
   const [searchEntradas, setSearchEntradas] = useState('');
   const [editingEntrada, setEditingEntrada] = useState<any | null>(null);
   const [conteoSearch, setConteoSearch] = useState('');
+  const [showWaModal, setShowWaModal] = useState(false);
+  const [waTicket, setWaTicket] = useState<any>(null);
+  const [waPhone, setWaPhone] = useState('');
 
   const tabs = [
     'MÁS VENDIDOS', 'MENOS VENDIDOS', 'TOP VENDIDOS', 'VENTAS', 
@@ -617,7 +621,7 @@ export default function Reports() {
     const address = settings.direccion || '';
     const phone = settings.telefono || '';
     const rfcVal = settings.rfc || '';
-    const logoUrl = localStorage.getItem('ticketLogo') || (settings as any).ticketLogo || '';
+    const logoUrl = settings.logo || localStorage.getItem('ticketLogo') || (settings as any).ticketLogo || '';
     const folioStr = String(ticket.folio || ticket.id || '').replace(/\D/g, '') || '000001';
     const dateObj = new Date(ticket.date);
     const dateStr = isNaN(dateObj.getTime()) ? String(ticket.date) : dateObj.toLocaleString('es-MX');
@@ -626,10 +630,10 @@ export default function Reports() {
       const qty = i.cartQty || i.qty || 1;
       const price = i.price || 0;
       const totalLine = i.total !== undefined ? i.total : (qty * price);
-      return `<div style="display:flex; justify-content:space-between; font-size:9px; font-weight:900; margin:2px 0;">
-        <span style="width:12%; text-align:center;">${qty}</span>
-        <span style="width:58%; text-align:left;">${(i.name || i.productName || '').toUpperCase()}</span>
-        <span style="width:30%; text-align:right;">${totalLine.toFixed(2)}</span>
+      return `<div style="display:flex; justify-content:space-between; font-size:11px; font-weight:800; margin:2px 0;">
+        <span style="width:14%; text-align:left;">${qty}</span>
+        <span style="width:54%; text-align:left; word-break:break-word;">${(i.name || i.productName || '').toUpperCase()}</span>
+        <span style="width:32%; text-align:right; font-family:monospace; padding-right:1mm;">$${totalLine.toFixed(2)}</span>
       </div>`;
     }).join('');
 
@@ -637,44 +641,43 @@ export default function Reports() {
     const cambio = ticket.cambio !== undefined ? ticket.cambio : Math.max(0, recibido - ticket.total);
 
     return `
-      <div id="ticket-print-temp" style="width: 44mm; padding: 1mm; font-family: Arial, sans-serif; font-size: 9px; font-weight: 900; color: #000; background: #fff; word-break: break-word;">
-        ${logoUrl ? `<img src="${logoUrl}" style="max-height:50px; max-width:140px; display:block; margin:0 auto 4px auto;" />` : ''}
+      <div id="ticket-print-temp" style="width:100%; max-width:48mm; margin:0 auto; padding:1mm 2mm 3mm 2mm; box-sizing:border-box; font-family:Arial, -apple-system, sans-serif; font-size:11px; font-weight:800; color:#000; background:#fff; word-break:break-word;">
+        ${logoUrl ? `<img src="${logoUrl}" style="max-height:50px; max-width:120px; display:block; margin:0 auto 2px auto; object-fit:contain; filter:grayscale(100%);" />` : ''}
         <div style="text-align:center; font-weight:900; text-transform:uppercase;">
-          <p style="margin:0; font-size:12px;">${companyName}</p>
-          ${slogan ? `<p style="margin:0;">${slogan}</p>` : ''}
-          ${address ? `<p style="margin:0;">${address}</p>` : ''}
-          ${phone ? `<p style="margin:0;">TEL: ${phone}</p>` : ''}
-          ${rfcVal ? `<p style="margin:0;">RFC: ${rfcVal}</p>` : ''}
+          <p style="margin:0 0 2px 0; font-size:13px; line-height:1.2;">${companyName}</p>
+          ${slogan ? `<p style="margin:0 0 1px 0; font-size:9.5px; font-weight:800;">"${slogan}"</p>` : ''}
+          ${address ? `<p style="margin:0 0 1px 0; font-size:9.5px; font-weight:800;">${address}</p>` : ''}
+          ${phone ? `<p style="margin:0 0 1px 0; font-size:9.5px; font-weight:800;">TEL: ${phone}</p>` : ''}
+          ${rfcVal ? `<p style="margin:0 0 1px 0; font-size:9.5px; font-weight:800;">RFC: ${rfcVal}</p>` : ''}
         </div>
-        <hr style="border:0; border-top:1.5px dashed #000; margin:4px 0;" />
-        <div style="font-weight:900;">
+        <div style="width:100%; border-top:1.5px dashed #000; margin:3px 0;"></div>
+        <div style="font-weight:800; font-size:10px; line-height:1.3;">
           <p style="margin:0;">FECHA: ${dateStr}</p>
           <p style="margin:0;">FOLIO: #${folioStr}</p>
           <p style="margin:0;">CLIENTE: ${(ticket.clientName || ticket.client || 'PUBLICO GENERAL').toUpperCase()}</p>
           <p style="margin:0;">MÉTODO: ${(ticket.paymentMethod || 'EFECTIVO').toUpperCase()}</p>
         </div>
-        <hr style="border:0; border-top:1.5px dashed #000; margin:4px 0;" />
-        <div style="display:flex; justify-content:space-between; font-weight:900; font-size:9px;">
-          <span style="width:12%; text-align:center;">CT</span>
-          <span style="width:58%; text-align:left;">DESCRIPCIÓN</span>
-          <span style="width:30%; text-align:right;">TOTAL</span>
+        <div style="width:100%; border-top:1.5px dashed #000; margin:3px 0;"></div>
+        <div style="display:flex; justify-content:space-between; font-weight:800; font-size:11px; border-bottom:1.5px solid #000; padding-bottom:1px;">
+          <span style="width:14%; text-align:left;">CT</span>
+          <span style="width:54%; text-align:left;">DESCRIPCIÓN</span>
+          <span style="width:32%; text-align:right; padding-right:1mm;">TOTAL</span>
         </div>
-        <div style="border-top:2px solid #000; margin:2px 0;"></div>
         ${itemRows}
-        <div style="border-top:2px solid #000; margin:2px 0;"></div>
-        <div style="display:flex; justify-content:space-between; font-weight:900; margin:2px 0;">
-          <span>TOTAL:</span><span>${(ticket.total || 0).toFixed(2)}</span>
+        <div style="width:100%; border-top:1.5px solid #000; margin:3px 0;"></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:16px; font-weight:900; margin:3px 0;">
+          <span>TOTAL:</span><span style="font-family:monospace; padding-right:1mm;">$${(ticket.total || 0).toFixed(2)}</span>
         </div>
         ${(ticket.paymentMethod || 'EFECTIVO').toUpperCase() === 'EFECTIVO' ? `
-          <div style="display:flex; justify-content:space-between; font-weight:900; margin:2px 0;">
-            <span>RECIBIDO:</span><span>${recibido.toFixed(2)}</span>
+          <div style="display:flex; justify-content:space-between; font-size:10.5px; font-weight:800; margin:1px 0;">
+            <span>RECIBIDO:</span><span style="font-family:monospace; padding-right:1mm;">$${recibido.toFixed(2)}</span>
           </div>
-          <div style="display:flex; justify-content:space-between; font-weight:900; margin:2px 0;">
-            <span>CAMBIO:</span><span>${cambio.toFixed(2)}</span>
+          <div style="display:flex; justify-content:space-between; font-size:10.5px; font-weight:800; margin:1px 0;">
+            <span>CAMBIO:</span><span style="font-family:monospace; padding-right:1mm;">$${cambio.toFixed(2)}</span>
           </div>
         ` : ''}
-        <hr style="border:0; border-top:1.5px dashed #000; margin:4px 0;" />
-        <p style="text-align:center; font-weight:900; margin-top:4px;">* GRACIAS POR SU COMPRA *</p>
+        <div style="width:100%; border-top:1.5px dashed #000; margin:3px 0;"></div>
+        <p style="text-align:center; font-weight:800; font-size:10px; margin-top:4px;">* GRACIAS POR SU COMPRA *</p>
       </div>
     `;
   };
@@ -686,7 +689,7 @@ export default function Reports() {
     const address = settings.direccion || '';
     const phone = settings.telefono || '';
     const rfcVal = settings.rfc || '';
-    const logoUrl = localStorage.getItem('ticketLogo') || (settings as any).ticketLogo || '';
+    const logoUrl = settings.logo || localStorage.getItem('ticketLogo') || (settings as any).ticketLogo || '';
 
     const folioStr = String(ticket.folio || ticket.id || '').replace(/\D/g, '') || '000001';
     const dateObj = new Date(ticket.date);
@@ -796,63 +799,36 @@ export default function Reports() {
     `);
   };
 
-  const sendTicketWhatsapp = async (ticket: any) => {
-    let phone = window.prompt('Número de WhatsApp del cliente (10 dígitos):', '') || '';
-    phone = phone.replace(/\D/g, '');
-    if (phone.length < 10) return alert('Número de WhatsApp inválido');
+  const sendTicketWhatsapp = (ticket: any) => {
+    if (!ticket) return;
+    setWaTicket(ticket);
+    const initialPhone = ticket.clientPhone || ticket.telefono || '';
+    setWaPhone(initialPhone);
+    setShowWaModal(true);
+  };
 
-    const folioStr = String(ticket.folio || ticket.id || '').replace(/\D/g, '') || '000001';
-    
-    // Generar un div temporal invisible para el PDF
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = getTicketHtmlString(ticket);
-    tempDiv.style.position = 'absolute';
-    tempDiv.style.left = '-9999px';
-    tempDiv.style.top = '-9999px';
-    document.body.appendChild(tempDiv);
-
-    try {
-      const el = tempDiv.querySelector('#ticket-print-temp') as HTMLElement;
-      if (el) {
-        const canvas = await html2canvas(el, { scale: 2 });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, canvas.height * (58 / canvas.width)] });
-        pdf.addImage(imgData, 'PNG', 0, 0, 58, canvas.height * (58 / canvas.width));
-        
-        let savedPath = '';
-        if ((window as any).require) {
-          const fsLib = (window as any).require('fs');
-          const pathLib = (window as any).require('path');
-          const osLib = (window as any).require('os');
-          const desktopPath = pathLib.join(osLib.homedir(), 'Desktop');
-          const fileName = `Ticket_${folioStr}.pdf`;
-          savedPath = pathLib.join(desktopPath, fileName);
-          const pdfBuffer = pdf.output('arraybuffer');
-          fsLib.writeFileSync(savedPath, new Uint8Array(pdfBuffer));
-          alert(`El PDF se ha guardado en tu Escritorio como: ${fileName}\n\nPor favor, adjúntalo en el chat de WhatsApp.`);
-        } else {
-          pdf.save(`Ticket_${folioStr}.pdf`);
-          alert('El PDF se ha descargado. Por favor, adjúntalo en el chat de WhatsApp.');
-        }
-      }
-    } catch (e) {
-      console.error("Error generando PDF:", e);
-    } finally {
-      document.body.removeChild(tempDiv);
+  const confirmSendWhatsapp = () => {
+    if (!waTicket) return;
+    const cleanPhone = waPhone.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      alert('Ingresa un número de WhatsApp válido (10 dígitos).');
+      return;
     }
 
-    const msg = `🧾 *TICKET DE COMPRA (REIMPRESIÓN)* 🧾\n📌 *FOLIO:* #${folioStr}\n💵 *TOTAL: ${(ticket.total || 0).toFixed(2)} MXN*\n\nTe adjunto tu ticket en formato PDF.`;
-    const waUrl = `https://wa.me/52${phone.slice(-10)}?text=${encodeURIComponent(msg)}`;
     try {
-      if ((window as any).require) {
-        const { shell } = (window as any).require('electron');
-        if (shell && shell.openExternal) shell.openExternal(waUrl);
-        else window.open(waUrl, '_blank');
-      } else {
-        window.open(waUrl, '_blank');
-      }
-    } catch(e) {
+      const settings = useSettings.getState();
+      const { pdf, fileName, folioStr } = generateDirectTicketPDF(waTicket, settings);
+
+      pdf.save(fileName);
+
+      const msg = `🧾 *TICKET DE COMPRA (REIMPRESIÓN)* 🧾\n📌 *FOLIO:* #${folioStr}\n💵 *TOTAL: $${(waTicket.total || 0).toFixed(2)} MXN*\n\nTe comparto tu ticket en formato PDF. ¡Gracias por tu compra!`;
+      const waUrl = `https://wa.me/52${cleanPhone.slice(-10)}?text=${encodeURIComponent(msg)}`;
+
       window.open(waUrl, '_blank');
+      setShowWaModal(false);
+    } catch(e: any) {
+      console.error('Error generando WhatsApp PDF:', e);
+      alert('Error al generar PDF: ' + e.message);
     }
   };
 
@@ -3422,6 +3398,73 @@ export default function Reports() {
           </div>
         </div>
       )}
+    
+      {/* MODAL DE WHATSAPP CON PDF */}
+      {showWaModal && waTicket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0f172a] border border-emerald-900/60 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in fade-in zoom-in duration-150">
+            <div className="flex justify-between items-center mb-4 border-b border-nexus-800 pb-3">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-white font-black text-sm uppercase tracking-wide">
+                  Enviar Ticket por WhatsApp
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowWaModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-nexus-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mb-4 bg-nexus-900/60 p-3 rounded-xl border border-nexus-800 text-xs">
+              <div className="flex justify-between text-slate-400 mb-1">
+                <span>Folio:</span>
+                <span className="text-white font-bold">#{waTicket.folio || waTicket.id}</span>
+              </div>
+              <div className="flex justify-between text-slate-400">
+                <span>Total:</span>
+                <span className="text-emerald-400 font-black">${(waTicket.total || 0).toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <label className="block text-slate-300 text-xs font-bold mb-2 uppercase">
+                WhatsApp (10 dígitos):
+              </label>
+              <input
+                type="tel"
+                placeholder="Ej. 9611234567"
+                value={waPhone}
+                onChange={(e) => setWaPhone(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') confirmSendWhatsapp();
+                }}
+                className="w-full bg-[#1e293b] border border-emerald-700/60 rounded-xl px-4 py-3 text-white text-sm font-mono text-center tracking-wider focus:outline-none focus:border-emerald-500"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex flex-col gap-2.5">
+              <button
+                onClick={confirmSendWhatsapp}
+                className="w-full bg-[#25D366] hover:bg-[#20b858] text-white py-3.5 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all"
+              >
+                <MessageCircle className="w-4 h-4" />
+                GENERAR PDF Y ABRIR WHATSAPP
+              </button>
+              <button
+                onClick={() => setShowWaModal(false)}
+                className="w-full text-slate-400 hover:text-white py-2 text-xs font-bold uppercase"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

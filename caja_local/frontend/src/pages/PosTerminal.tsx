@@ -2,8 +2,9 @@ import { LicenseModal } from '../components/LicenseModal';
 import React, { useState, useEffect, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { generateDirectTicketPDF } from '../utils/ticketPdf';
 import { 
-  Search, User, Wallet,
+  ClipboardList, Search, User, Wallet,
   CreditCard, Banknote, Smartphone, PauseCircle,
   CheckCircle2, Bolt, Droplet, ArrowDownToLine, ShoppingCart, Wifi,
   X, Printer, List, ShieldCheck, Lock, UserCheck, SmartphoneNfc, Layers
@@ -83,6 +84,16 @@ const CartRow = React.memo(({ item, onUpdateQuantity, onRemove, onFocusSearch }:
   );
 });
 
+function formatTicketDate(dStr: any) {
+  if (!dStr) return '';
+  try {
+    const d = new Date(dStr);
+    return isNaN(d.getTime()) ? String(dStr) : d.toLocaleString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  } catch(e) {
+    return String(dStr);
+  }
+}
+
 export default function PosTerminal() {
   const { isOnline } = useLiveSyncStore();
   const { nombreNegocio, rfc, eslogan, telefono, direccion, mercadoPagoToken, mercadoPagoDeviceId, servidorIp, clipApiKey, clipSecretKey, clipSerialNumber, clipModo, logo, cajaNombre, activeUser, usersList, requirePasswordLogin, setSettings } = useSettings();
@@ -104,6 +115,11 @@ export default function PosTerminal() {
   }, [cart.length]);
   
   // Terminal Linking & Paused Sales State
+    const [showNegadoModal, setShowNegadoModal] = useState(false);
+  const [negadoNombre, setNegadoNombre] = useState('');
+  const [negadoCantidad, setNegadoCantidad] = useState(1);
+  const [negadoProveedor, setNegadoProveedor] = useState('');
+  const [negadoSugerencias, setNegadoSugerencias] = useState<any[]>([]);
   const [showUserModal, setShowUserModal] = useState(false);
   const [selectedUserToSwitch, setSelectedUserToSwitch] = useState<any>(null);
   const [userPinInput, setUserPinInput] = useState('');
@@ -575,6 +591,42 @@ export default function PosTerminal() {
   };
 
 
+  
+  const handleRegistrarNegado = async () => {
+    if (!negadoNombre.trim()) {
+      alert('Escribe el nombre del producto solicitado');
+      return;
+    }
+    const item = {
+      id: 'NEG-' + Date.now(),
+      name: negadoNombre.trim().toUpperCase(),
+      supplier: negadoProveedor.trim() || 'SIN_PROVEEDOR',
+      requested_qty: Number(negadoCantidad) || 1,
+      date: new Date().toISOString()
+    };
+    try {
+      const cur = JSON.parse(localStorage.getItem('nexus_productos_negados') || '[]');
+      cur.push(item);
+      localStorage.setItem('nexus_productos_negados', JSON.stringify(cur));
+    } catch(e) {}
+
+    // Transmitir al servidor de pedidos si está activo
+    try {
+      fetch('http://127.0.0.1:3002/api/negados', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item)
+      }).catch(() => {});
+    } catch(e) {}
+
+    alert(`✅ Producto anotado para el próximo pedido: ${item.name} (${item.requested_qty} pz).`);
+    setNegadoNombre('');
+    setNegadoCantidad(1);
+    setNegadoProveedor('');
+    setNegadoSugerencias([]);
+    setShowNegadoModal(false);
+  };
+
   const handlePaymentClick = (method: string) => {
     setPaymentMethod(method);
     if (cart.length > 0 && method !== 'EFECTIVO') {
@@ -718,8 +770,60 @@ export default function PosTerminal() {
         window.print();
         return;
       }
+      const printStyles = `
+        <style>
+          @page {
+            margin: 0 !important;
+            size: auto !important;
+          }
+          * {
+            box-sizing: border-box !important;
+            color: #000000 !important;
+            font-family: Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            background: #ffffff !important;
+          }
+          #ticket-print {
+            width: 100% !important;
+            max-width: 48mm !important;
+            margin: 0 auto !important;
+            padding: 1mm 2mm 3mm 2mm !important;
+            box-sizing: border-box !important;
+            font-size: 11px !important;
+            line-height: 1.25 !important;
+            color: #000000 !important;
+            font-weight: 800 !important;
+            border: none !important;
+            box-shadow: none !important;
+            overflow: hidden !important;
+            word-break: break-word !important;
+          }
+          #ticket-print table {
+            width: 100% !important;
+            max-width: 100% !important;
+            table-layout: fixed !important;
+            border-collapse: collapse !important;
+            margin: 2px 0 !important;
+          }
+          #ticket-print th, #ticket-print td {
+            font-size: 11px !important;
+            font-weight: 800 !important;
+            padding: 1.5px 0 !important;
+            color: #000000 !important;
+          }
+          #ticket-print th {
+            border-bottom: 1.5px solid #000000 !important;
+          }
+        </style>
+      `;
       doc.open();
-      doc.write('<html><head><title>Ticket NEXUS POS</title>' + styles + '<style>@page { margin: 0; size: auto; } @media print { body, html { margin: 0; padding: 0; width: 100%; } #ticket-print { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; border: none !important; box-shadow: none !important; } }</style></head><body style="margin:0; padding:0; background:white; width: 100%;">' + el.outerHTML + '</body></html>');
+      doc.write('<html><head><title>Ticket NEXUS POS</title>' + styles + printStyles + '</head><body style="margin:0; padding:0; background:white; width: 100%;">' + el.outerHTML + '</body></html>');
       doc.close();
 
       setTimeout(() => {
@@ -741,51 +845,52 @@ export default function PosTerminal() {
     if (!lastTicket) return;
     setShowWaModal(true);
   };
-  const confirmSendWhatsapp = async () => {
+  const confirmSendWhatsapp = () => {
     let phone = waPhone.replace(/\D/g, '');
     if (phone.length < 10) { alert('Número de WhatsApp inválido. Debe tener 10 dígitos.'); return; }
     setShowWaModal(false);
 
-    const el = document.getElementById('ticket-print');
-    if (el) {
-      try {
-        const canvas = await html2canvas(el, { scale: 2 });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [48, canvas.height * (48 / canvas.width)] });
-        pdf.addImage(imgData, 'PNG', 0, 0, 48, canvas.height * (48 / canvas.width));
-        
-        let savedPath = '';
-        if ((window as any).require) {
+    try {
+      const settings = useSettings.getState();
+      const { pdf, fileName, folioStr } = generateDirectTicketPDF(lastTicket, settings);
+
+      let savedPath = '';
+      if ((window as any).require) {
+        try {
           const fsLib = (window as any).require('fs');
           const pathLib = (window as any).require('path');
           const osLib = (window as any).require('os');
           const desktopPath = pathLib.join(osLib.homedir(), 'Desktop');
-          const fileName = `Ticket_${lastTicket.folio}.pdf`;
           savedPath = pathLib.join(desktopPath, fileName);
           const pdfBuffer = pdf.output('arraybuffer');
           fsLib.writeFileSync(savedPath, new Uint8Array(pdfBuffer));
-          alert(`El PDF se ha guardado en tu Escritorio como: ${fileName}\n\nPor favor, adjúntalo en el chat de WhatsApp.`);
-        } else {
-          pdf.save(`Ticket_${lastTicket.folio}.pdf`);
-          alert('El PDF se ha descargado. Por favor, adjúntalo en el chat de WhatsApp.');
+        } catch(err) {
+          console.warn('Fallback guardando en Desktop:', err);
+          pdf.save(fileName);
         }
-      } catch (e) {
-        console.error("Error generando PDF:", e);
+      } else {
+        pdf.save(fileName);
       }
-    }
 
-    const msg = `🧾 *TICKET DE COMPRA* 🧾\n📌 *FOLIO:* #${lastTicket.folio}\n💵 *TOTAL: $${lastTicket.total.toFixed(2)} MXN*\n\nTe adjunto tu ticket en formato PDF. ¡Gracias por tu compra!`;
-    const waUrl = `https://wa.me/52${phone.slice(-10)}?text=${encodeURIComponent(msg)}`;
-    try {
+      const msg = `🧾 *TICKET DE COMPRA* 🧾\n📌 *FOLIO:* #${folioStr}\n💵 *TOTAL: $${(lastTicket.total || 0).toFixed(2)} MXN*\n\nTe comparto tu ticket de compra en formato PDF. ¡Gracias por tu preferencia!`;
+      const waUrl = `https://wa.me/52${phone.slice(-10)}?text=${encodeURIComponent(msg)}`;
+
       if ((window as any).require) {
-        const { shell } = (window as any).require('electron');
-        if (shell && shell.openExternal) shell.openExternal(waUrl);
-        else window.open(waUrl, '_blank');
+        try {
+          const { shell } = (window as any).require('electron');
+          if (shell && shell.openExternal) shell.openExternal(waUrl);
+          else window.open(waUrl, '_blank');
+        } catch(e) {
+          window.open(waUrl, '_blank');
+        }
       } else {
         window.open(waUrl, '_blank');
       }
-    } catch(e) {
-      window.open(waUrl, '_blank');
+
+      alert(`✓ PDF (${fileName}) guardado en tu Escritorio / Descargas.\nSe ha abierto WhatsApp para que lo envíes.`);
+    } catch(e: any) {
+      console.error("Error generando PDF WhatsApp:", e);
+      alert('Error al generar PDF: ' + e.message);
     }
   };
 
@@ -817,6 +922,7 @@ export default function PosTerminal() {
 // Atajos de teclado
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F4') { e.preventDefault(); setShowNegadoModal(true); }
       if (e.key === 'F1') { e.preventDefault(); searchInputRef.current?.focus(); }
       if (e.key === 'F6') { e.preventDefault(); handlePaymentClick('EFECTIVO'); }
       if (e.key === 'F7') { e.preventDefault(); handlePaymentClick('TARJETA'); }
@@ -1012,6 +1118,17 @@ export default function PosTerminal() {
             <Wallet className="w-4 h-4 text-fuchsia-400" />
             <span className="font-black text-sm text-fuchsia-400">${client.monedero.toFixed(2)}</span>
           </div>
+          
+          {/* BOTÓN: PRODUCTO NEGADO EN CAJA */}
+          <button
+            onClick={() => setShowNegadoModal(true)}
+            className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 font-black px-3 py-1.5 rounded-xl flex items-center gap-2 transition-all shadow-sm cursor-pointer"
+            title="Anotar producto que el cliente pidió y no hay (F4)"
+          >
+            <ClipboardList className="w-4 h-4 text-amber-400" />
+            <span className="text-xs font-black tracking-wider">PEDIR PRODUCTO (F4)</span>
+          </button>
+
           <div className="w-px h-6 bg-nexus-800 mx-1"></div>
           <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400">
             <Wifi className="w-4 h-4" />
@@ -1048,6 +1165,7 @@ export default function PosTerminal() {
 
           <div className="h-12 bg-nexus-900 border-t border-nexus-800 shrink-0 flex items-center px-4 gap-4 text-[10px] font-black text-slate-500 tracking-widest">
             <kbd className="bg-nexus-800 px-2 py-1 rounded">F1</kbd> Buscar
+            <span className="text-amber-400 font-black">NEGADO [F4]</span>
             <div className="w-px h-4 bg-nexus-700 mx-2"></div>
             <span>EFE [F6]</span>
             <span>TAR [F7]   CLIP</span>
@@ -1471,22 +1589,30 @@ export default function PosTerminal() {
             <p className="text-center text-xs font-black text-slate-500 uppercase tracking-widest mb-4">FOLIO #{lastTicket.folio} - {lastTicket.date}</p>
 
             {/* TICKET TÉRMICO */}
-            <div id="ticket-print" className="bg-white px-2 py-0 font-mono text-black w-full text-[12px] font-black select-none" style={{ color: "#000000", fontWeight: "900", textShadow: "0px 0px 1px #000", filter: "contrast(200%) grayscale(100%)" }}>
+            <div 
+              id="ticket-print" 
+              className="bg-white p-3 font-sans text-black select-none mx-auto w-full max-w-[320px] shadow-sm rounded text-left" 
+              style={{ 
+                color: "#000000", 
+                fontWeight: "800",
+                wordBreak: "break-word"
+              }}
+            >
               <div className="text-center mb-1">
-                {logo && <img src={logo} alt="Logo" className="max-h-[60px] max-w-[140px] mx-auto mb-2 object-contain grayscale"  />}
-                <p className="font-black text-[12px] leading-tight text-black c uppercase">{nombreNegocio}</p>
+                {logo && <img src={logo} alt="Logo" className="max-h-[50px] max-w-[120px] mx-auto mb-1 object-contain grayscale" />}
+                <p className="font-black text-[13px] leading-tight text-black uppercase" style={{ wordBreak: "break-word" }}>{nombreNegocio}</p>
               </div>
-              <div className="text-center text-[10px] mb-1 c font-black text-black">
-                {eslogan && <p className="italic font-bold">{eslogan}</p>}
-                <p className="mt-1 font-black">{direccion}</p>
+              <div className="text-center font-black leading-tight my-0.5 text-[9.5px]" style={{ wordBreak: "break-word" }}>
+                {eslogan && <p className="italic font-bold">"{eslogan}"</p>}
+                <p className="mt-0.5 font-black">{direccion}</p>
                 {telefono && <p className="font-black">TEL: {telefono}</p>}
-                {rfc && <p className="font-black mt-1">RFC: {rfc}</p>}
+                {rfc && <p className="font-black mt-0.5">RFC: {rfc}</p>}
               </div>
 
-              <hr className="border-t-2 border-dashed border-black my-1" />
+              <div className="w-full my-1 border-t border-dashed border-black"></div>
 
-              <div className="text-[10px] mb-2 font-black text-black leading-tight space-y-0.5">
-                <p className="font-black">FECHA: {lastTicket.date}</p>
+              <div className="font-black text-black leading-tight space-y-0.5 my-1 text-[10px]">
+                <p className="font-black">FECHA: {formatTicketDate(lastTicket.date)}</p>
                 <p className="font-black">FOLIO: #{lastTicket.folio}</p>
                 <p className="font-black">CAJA: {(lastTicket.caja || cajaNombre || 'CAJA 1 - PRINCIPAL').toUpperCase()}</p>
                 <p className="font-black">CAJERO: {(lastTicket.cajero || activeUser?.name || 'ADMINISTRADOR').toUpperCase()}</p>
@@ -1494,57 +1620,60 @@ export default function PosTerminal() {
                 <p className="font-black">MÉTODO PAGO: {lastTicket.paymentMethod}</p>
               </div>
 
-              <hr className="border-t-2 border-dashed border-black my-1" />
+              <div className="w-full my-1 border-t border-dashed border-black"></div>
 
-              <table className="w-full text-[9px] mb-1 border-collapse table-fixed font-black text-black">
+              <table className="w-full border-collapse my-1 text-[11px] font-black" style={{ tableLayout: "fixed" }}>
                 <thead>
-                  <tr className="border-b-2 border-black text-[9px]">
-                    <th className="text-center font-black py-0.5 cant-col" style={{ width: '12%' }}>CT</th>
-                    <th className="text-left font-black py-0.5 desc-col" style={{ width: '58%' }}>DESCRIPCIÓN</th>
-                    <th className="text-right font-black py-0.5 tot-col" style={{ width: '30%' }}>TOTAL</th>
+                  <tr style={{ borderBottom: "1.5px solid #000" }}>
+                    <th style={{ width: "14%", textAlign: "left", padding: "2px 0" }}>CT</th>
+                    <th style={{ width: "54%", textAlign: "left", padding: "2px 0" }}>DESCRIPCIÓN</th>
+                    <th style={{ width: "32%", textAlign: "right", padding: "2px 1.5mm 2px 0", whiteSpace: "nowrap" }}>TOTAL</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/30">
                   {(lastTicket.items || lastTicket.cart || []).map((item: any) => (
-                    <tr key={item.id} className="align-top font-black text-black">
-                      <td className="py-1 text-center font-black cant-col" style={{ width: '12%' }}>{item.cartQty}</td>
-                      <td className="py-1 pr-1 break-words font-black uppercase desc-col" style={{ width: '58%' }}>
+                    <tr key={item.id} style={{ verticalAlign: "top" }}>
+                      <td style={{ width: "14%", textAlign: "left", padding: "2px 0" }}>{item.cartQty}</td>
+                      <td style={{ width: "54%", textAlign: "left", padding: "2px 0", wordBreak: "break-word" }}>
                         {item.name}
-                        {true && <span className="block text-[10px] text-black font-black">({item.cartQty} x ${item.price?.toFixed(2)})</span>}
+                        {item.cartQty > 1 && <span style={{ display: "block", fontSize: "9px", fontWeight: "700" }}>({item.cartQty} x ${item.price?.toFixed(2)})</span>}
                       </td>
-                      <td className="py-1 text-right font-mono font-black tot-col" style={{ width: '30%' }}>${lineTotal(item).toFixed(2)}</td>
+                      <td style={{ width: "32%", textAlign: "right", padding: "2px 1.5mm 2px 0", fontFamily: "monospace", whiteSpace: "nowrap" }}>${lineTotal(item).toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
 
-              <div className="border-t-2 border-black my-1"></div>
+              <div className="w-full my-1 border-t-2 border-solid border-black"></div>
 
-              <p className="text-center text-xl font-black my-1 c text-black tracking-wide">TOTAL: ${lastTicket.total.toFixed(2)}</p>
+              <div className="flex justify-between items-center text-[15px] font-black my-1 w-full">
+                <span>TOTAL:</span>
+                <span className="font-mono text-[16px] font-black" style={{ paddingRight: "1.5mm" }}>${(lastTicket.total || 0).toFixed(2)}</span>
+              </div>
+
               {lastTicket.paymentMethod === 'EFECTIVO' && (
-                <div className="text-[10px] c font-black text-black leading-none">
-                  <p className="font-black">RECIBIDO: ${lastTicket.recibido.toFixed(2)}</p>
-                  <p className="font-black">CAMBIO: ${Math.max(0, lastTicket.recibido - lastTicket.total).toFixed(2)}</p>
+                <div className="text-[10px] font-black leading-tight my-1 space-y-0.5 w-full">
+                  <div className="flex justify-between"><span>RECIBIDO:</span><span className="font-mono" style={{ paddingRight: "1.5mm" }}>${(lastTicket.recibido || lastTicket.total || 0).toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span>CAMBIO:</span><span className="font-mono" style={{ paddingRight: "1.5mm" }}>${Math.max(0, (lastTicket.recibido || 0) - (lastTicket.total || 0)).toFixed(2)}</span></div>
                 </div>
               )}
               {lastTicket.paymentMethod === 'MIXTO' && (
-                <div className="text-[10px] c font-black text-black leading-tight my-1 space-y-0.5">
-                  <p className="font-black text-center">FORMA DE PAGO: MIXTO</p>
-                  <p className="font-bold">• EN EFECTIVO: ${(lastTicket.montoEfectivo || 0).toFixed(2)}</p>
-                  <p className="font-bold">• {lastTicket.metodoMixtoSecundario || 'TARJETA'}: ${(lastTicket.montoTarjeta || lastTicket.montoTransferencia || (lastTicket.total - (lastTicket.montoEfectivo || 0))).toFixed(2)}</p>
+                <div className="text-[10px] font-black leading-tight my-1 space-y-0.5 w-full">
+                  <p className="text-center">FORMA DE PAGO: MIXTO</p>
+                  <p>• EN EFECTIVO: ${(lastTicket.montoEfectivo || 0).toFixed(2)}</p>
+                  <p>• {lastTicket.metodoMixtoSecundario || 'TARJETA'}: ${(lastTicket.montoTarjeta || lastTicket.montoTransferencia || ((lastTicket.total || 0) - (lastTicket.montoEfectivo || 0))).toFixed(2)}</p>
                   {lastTicket.recibido && lastTicket.recibido > (lastTicket.montoEfectivo || 0) && (
                     <>
-                      <p className="font-black">• EFECTIVO RECIBIDO: ${lastTicket.recibido.toFixed(2)}</p>
-                      <p className="font-black">• CAMBIO ENTREGADO: ${(lastTicket.cambio || 0).toFixed(2)}</p>
+                      <p>• EFECTIVO RECIBIDO: ${(lastTicket.recibido || 0).toFixed(2)}</p>
+                      <p>• CAMBIO ENTREGADO: ${(lastTicket.cambio || 0).toFixed(2)}</p>
                     </>
                   )}
                 </div>
               )}
 
-              <hr className="border-t-2 border-dashed border-black my-1" />
-              <p className="text-center text-[10px] mt-1 c font-black text-black tracking-widest">* GRACIAS POR SU COMPRA *</p>
+              <div className="w-full my-1 border-t border-dashed border-black"></div>
+              <p className="text-center font-black mt-1 text-[10px] tracking-wider">* GRACIAS POR SU COMPRA *</p>
             </div>
-
             {/* ACCIONES DEL TICKET */}
             <div className="flex gap-3 mb-6">
               <button onClick={sendWhatsapp} className="flex-1 bg-[#10b981] hover:bg-[#059669] text-white py-3 rounded-xl font-black text-xs uppercase flex justify-center items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"> <Smartphone className="w-4 h-4" /> PDF / WHATSAPP </button>
@@ -2020,6 +2149,115 @@ export default function PosTerminal() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      
+      {/* MODAL: PRODUCTO NEGADO / SOLICITADO POR CLIENTE */}
+      {showNegadoModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0f172a] border border-amber-500/40 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+            <div className="flex justify-between items-center mb-4 border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-amber-500/20 text-amber-400 rounded-lg">
+                  <ClipboardList className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-white text-base">Producto Solicitado / Negado</h3>
+                  <p className="text-[10px] text-slate-400">Se agregará al pedido inteligente del proveedor</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowNegadoModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">Nombre del Producto:</label>
+                <input
+                  type="text"
+                  value={negadoNombre}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setNegadoNombre(val);
+                    if (val.length >= 2) {
+                      const sugs = productIndex.search(val, 4);
+                      setNegadoSugerencias(sugs);
+                    } else {
+                      setNegadoSugerencias([]);
+                    }
+                  }}
+                  placeholder="Ej. Mayonesa McCormick 1kg, Sabritas Habanero..."
+                  className="w-full bg-[#1e293b] border border-slate-700 rounded-xl px-4 py-2.5 text-white font-medium text-sm focus:outline-none focus:border-amber-400"
+                  autoFocus
+                />
+                {negadoSugerencias.length > 0 && (
+                  <div className="mt-1 bg-slate-900 border border-slate-800 rounded-xl p-2 space-y-1">
+                    <p className="text-[10px] text-slate-400 font-bold px-2">¿Es alguno de tu catálogo agotado?:</p>
+                    {negadoSugerencias.map(s => (
+                      <div 
+                        key={s.id} 
+                        onClick={() => {
+                          setNegadoNombre(s.name);
+                          setNegadoProveedor(s.supplier_id || s.supplier || '');
+                          setNegadoSugerencias([]);
+                        }}
+                        className="p-2 hover:bg-slate-800 rounded-lg cursor-pointer flex justify-between text-xs"
+                      >
+                        <span className="text-white font-bold">{s.name}</span>
+                        <span className="text-red-400 font-mono">Stock: {s.stock}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-300 block mb-1">Cantidad pedida:</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={negadoCantidad}
+                    onChange={(e) => setNegadoCantidad(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full bg-[#1e293b] border border-slate-700 rounded-xl px-4 py-2 text-white font-black text-center text-lg focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-300 block mb-1">Proveedor (Opcional):</label>
+                  <input
+                    type="text"
+                    value={negadoProveedor}
+                    onChange={(e) => setNegadoProveedor(e.target.value)}
+                    placeholder="Ej. Bimbo, Sabritas..."
+                    className="w-full bg-[#1e293b] border border-slate-700 rounded-xl px-3 py-2.5 text-white text-xs focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowNegadoModal(false)}
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRegistrarNegado}
+                  className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  <ClipboardList className="w-4 h-4" />
+                  AGREGAR AL PEDIDO
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

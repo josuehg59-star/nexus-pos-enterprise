@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, shell, ipcMain } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 
@@ -115,6 +115,64 @@ function createWindow() {
     mainWindow = null;
   });
 }
+
+
+// ==========================================
+// IPC HANDLERS: GESTIÓN DE IMPRESORAS Y TICKETS
+// ==========================================
+ipcMain.handle('get-system-printers', async (event) => {
+  try {
+    const printers = await event.sender.getPrintersAsync();
+    console.log('[NEXUS IMPRESORAS DETECTADAS]:', printers.map(p => p.name));
+    return printers;
+  } catch (err) {
+    console.error('Error al obtener impresoras del sistema:', err);
+    return [];
+  }
+});
+
+ipcMain.handle('print-ticket-html', async (event, { html, deviceName, silent, copies }) => {
+  try {
+    const printWin = new BrowserWindow({
+      show: false,
+      width: 420,
+      height: 700,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
+
+    await printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+
+    return new Promise((resolve) => {
+      const useSilent = silent === true && Boolean(deviceName);
+      if (!useSilent) {
+        try { printWin.show(); } catch(_) {}
+      }
+      printWin.webContents.print(
+        {
+          silent: useSilent,
+          printBackground: true,
+          deviceName: deviceName || '',
+          margins: { marginType: 'none' },
+          copies: copies || 1
+        },
+        (success, failureReason) => {
+          setTimeout(() => {
+            try {
+              if (!printWin.isDestroyed()) printWin.close();
+            } catch(e) {}
+          }, 1200);
+          resolve({ success, failureReason });
+        }
+      );
+    });
+  } catch (err) {
+    console.error('Error al imprimir ticket:', err);
+    return { success: false, error: err.message };
+  }
+});
 
 app.whenReady().then(() => {
   startSyncServer();

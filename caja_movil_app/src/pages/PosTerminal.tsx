@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { generateDirectTicketPDF } from '../utils/ticketPdf';
 import { 
   Search, User, Wallet,
   CreditCard, Banknote, Smartphone, PauseCircle,
@@ -715,7 +716,7 @@ export default function PosTerminal() {
         return;
       }
       doc.open();
-      doc.write('<html><head><title>Ticket NEXUS POS</title>' + styles + '<style>@page { margin: 0; size: auto; } @media print { body, html { margin: 0; padding: 0; width: 100%; } #ticket-print { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; border: none !important; box-shadow: none !important; } }</style></head><body style="margin:0; padding:0; background:white; width: 100%;">' + el.outerHTML + '</body></html>');
+      doc.write('<html><head><title>Ticket NEXUS POS</title>' + styles + '<style>@page { margin: 0; size: auto; } @media print { body, html { margin: 0; padding: 0; width: 100%; } #ticket-print { width: 100% !important; max-width: 48mm !important; margin: 0 auto !important; padding: 1mm 2mm 3mm 2mm !important; box-sizing: border-box !important; border: none !important; box-shadow: none !important; } }</style></head><body style="margin:0; padding:0; background:white; width: 100%;">' + el.outerHTML + '</body></html>');
       doc.close();
 
       setTimeout(() => {
@@ -737,51 +738,24 @@ export default function PosTerminal() {
     if (!lastTicket) return;
     setShowWaModal(true);
   };
-  const confirmSendWhatsapp = async () => {
+  const confirmSendWhatsapp = () => {
     let phone = waPhone.replace(/\D/g, '');
     if (phone.length < 10) { alert('Número de WhatsApp inválido. Debe tener 10 dígitos.'); return; }
     setShowWaModal(false);
 
-    const el = document.getElementById('ticket-print');
-    if (el) {
-      try {
-        const canvas = await html2canvas(el, { scale: 2 });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [48, canvas.height * (48 / canvas.width)] });
-        pdf.addImage(imgData, 'PNG', 0, 0, 48, canvas.height * (48 / canvas.width));
-        
-        let savedPath = '';
-        if ((window as any).require) {
-          const fsLib = (window as any).require('fs');
-          const pathLib = (window as any).require('path');
-          const osLib = (window as any).require('os');
-          const desktopPath = pathLib.join(osLib.homedir(), 'Desktop');
-          const fileName = `Ticket_${lastTicket.folio}.pdf`;
-          savedPath = pathLib.join(desktopPath, fileName);
-          const pdfBuffer = pdf.output('arraybuffer');
-          fsLib.writeFileSync(savedPath, new Uint8Array(pdfBuffer));
-          alert(`El PDF se ha guardado en tu Escritorio como: ${fileName}\n\nPor favor, adjúntalo en el chat de WhatsApp.`);
-        } else {
-          pdf.save(`Ticket_${lastTicket.folio}.pdf`);
-          alert('El PDF se ha descargado. Por favor, adjúntalo en el chat de WhatsApp.');
-        }
-      } catch (e) {
-        console.error("Error generando PDF:", e);
-      }
-    }
-
-    const msg = `🧾 *TICKET DE COMPRA* 🧾\n📌 *FOLIO:* #${lastTicket.folio}\n💵 *TOTAL: $${lastTicket.total.toFixed(2)} MXN*\n\nTe adjunto tu ticket en formato PDF. ¡Gracias por tu compra!`;
-    const waUrl = `https://wa.me/52${phone.slice(-10)}?text=${encodeURIComponent(msg)}`;
     try {
-      if ((window as any).require) {
-        const { shell } = (window as any).require('electron');
-        if (shell && shell.openExternal) shell.openExternal(waUrl);
-        else window.open(waUrl, '_blank');
-      } else {
-        window.open(waUrl, '_blank');
-      }
-    } catch(e) {
+      const settings = useSettings.getState();
+      const { pdf, fileName, folioStr } = generateDirectTicketPDF(lastTicket, settings);
+
+      pdf.save(fileName);
+
+      const msg = `🧾 *TICKET DE COMPRA* 🧾\n📌 *FOLIO:* #${folioStr}\n💵 *TOTAL: $${(lastTicket.total || 0).toFixed(2)} MXN*\n\nTe comparto tu ticket en formato PDF. ¡Gracias por tu compra!`;
+      const waUrl = `https://wa.me/52${phone.slice(-10)}?text=${encodeURIComponent(msg)}`;
+
       window.open(waUrl, '_blank');
+    } catch(e: any) {
+      console.error('Error generando WhatsApp PDF:', e);
+      alert('Error al generar PDF: ' + e.message);
     }
   };
 

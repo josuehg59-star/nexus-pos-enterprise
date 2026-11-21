@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { generateDirectTicketPDF } from '../utils/ticketPdf';
 import { db } from '../store/database';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useSettings } from '../store/useSettings';
@@ -153,6 +154,20 @@ export default function Reports() {
   const [searchEntradas, setSearchEntradas] = useState('');
   const [editingEntrada, setEditingEntrada] = useState<any | null>(null);
   const [conteoSearch, setConteoSearch] = useState('');
+
+  // MODAL Y GESTIÓN DE IMPRESORAS PARA REIMPRESIÓN
+  const [showPrinterModal, setShowPrinterModal] = useState(false);
+  const [ticketToPrint, setTicketToPrint] = useState<any>(null);
+  const [availablePrinters, setAvailablePrinters] = useState<any[]>([]);
+  const [selectedPrinter, setSelectedPrinter] = useState<string>(() => localStorage.getItem('nexus_selected_printer') || '');
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [printFeedback, setPrintFeedback] = useState<string | null>(null);
+
+  // MODAL DE WHATSAPP CON PDF
+  const [showWaModal, setShowWaModal] = useState(false);
+  const [waTicket, setWaTicket] = useState<any>(null);
+  const [waPhone, setWaPhone] = useState('');
+
 
   const tabs = [
     'MÁS VENDIDOS', 'MENOS VENDIDOS', 'TOP VENDIDOS', 'VENTAS', 
@@ -689,180 +704,403 @@ export default function Reports() {
     `;
   };
 
-  const reimprimirTicket = (ticket: any) => {
+  const generateTicketHTML = (ticket: any) => {
     const settings = useSettings.getState();
-    const companyName = settings.nombreNegocio || 'MI TIENDITA';
-    const slogan = settings.eslogan || '';
-    const address = settings.direccion || '';
+    const companyName = (settings.nombreNegocio || 'MI TIENDITA').toUpperCase();
+    const slogan = (settings.eslogan || '').toUpperCase();
+    const address = (settings.direccion || '').toUpperCase();
     const phone = settings.telefono || '';
-    const rfcVal = settings.rfc || '';
-    const logoUrl = localStorage.getItem('ticketLogo') || (settings as any).ticketLogo || '';
+    const rfcVal = (settings.rfc || '').toUpperCase();
+    const logoUrl = settings.logo || localStorage.getItem('ticketLogo') || (settings as any).ticketLogo || '';
 
     const folioStr = String(ticket.folio || ticket.id || '').replace(/\D/g, '') || '000001';
-    const dateObj = new Date(ticket.date);
-    const dateStr = isNaN(dateObj.getTime()) ? String(ticket.date) : dateObj.toLocaleString('es-MX');
+    let dateStr = '';
+    try {
+      const d = new Date(ticket.date);
+      dateStr = isNaN(d.getTime()) ? String(ticket.date) : d.toLocaleString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    } catch(e) {
+      dateStr = String(ticket.date || '');
+    }
 
-    const items = ticket.items || [];
+    const items = ticket.items || ticket.cart || [];
     const itemRows = items.map((i: any) => {
       const qty = i.cartQty || i.qty || 1;
       const price = i.price || 0;
       const totalLine = i.total !== undefined ? i.total : (qty * price);
       const nameStr = (i.name || i.productName || 'PRODUCTO').toUpperCase();
       return `
-        <tr style="vertical-align:top;">
-          <td style="width:12%; text-align:center; padding:1px 0; font-weight:900 !important; color:#000 !important;">${qty}</td>
-          <td style="width:58%; text-align:left; padding:1px 0; word-break:break-word; font-weight:900 !important; color:#000 !important;">
+        <tr style="vertical-align:top; font-weight:800; color:#000000;">
+          <td class="cant-col">${qty}</td>
+          <td class="desc-col">
             ${nameStr}
-            ${qty > 1 ? `<br/><span style="font-size:8px; font-weight:normal; color:#000;">(${qty} x $${price.toFixed(2)})</span>` : ''}
+            ${qty > 1 ? `<br/><span style="font-size:9px; font-weight:700;">(${qty} x $${price.toFixed(2)})</span>` : ''}
           </td>
-          <td style="width:30%; text-align:right; padding:1px 0; font-weight:900 !important; color:#000 !important;">$${totalLine.toFixed(2)}</td>
+          <td class="tot-col">$${totalLine.toFixed(2)}</td>
         </tr>
       `;
     }).join('');
 
     const recibido = ticket.recibido !== undefined ? ticket.recibido : ticket.total;
     const cambio = ticket.cambio !== undefined ? ticket.cambio : Math.max(0, recibido - ticket.total);
+    const cajaStr = (ticket.caja || settings.cajaNombre || 'CAJA 1 - PRINCIPAL').toUpperCase();
+    const cajeroStr = (ticket.cajero || settings.activeUser?.name || 'ADMINISTRADOR').toUpperCase();
 
-    const w = window.open('', '_blank', 'width=420,height=700');
-    if (!w) return alert('Permite ventanas emergentes para reimprimir el ticket.');
-
-    w.document.write(`
+    return `
+      <!DOCTYPE html>
       <html>
         <head>
+          <meta charset="utf-8" />
           <title>Ticket Reimpresion #${folioStr}</title>
           <style>
-            @page { size: 58mm auto; margin: 0; }
-            body {
-              font-family: Arial, sans-serif;
-              font-size: 9px;
-              font-weight: 900 !important;
-              width: 44mm !important;
-              max-width: 44mm !important;
-              margin: 0 auto !important;
-              padding: 1mm 0 !important;
+            @page { size: auto; margin: 0; }
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
               color: #000000 !important;
-              background-color: #ffffff !important;
+              font-family: Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            body, html {
+              margin: 0;
+              padding: 0;
+              width: 100%;
+              background: #ffffff;
+            }
+            #ticket-reprint {
+              font-family: Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif;
+              font-size: 11px;
+              font-weight: 800 !important;
+              width: 100% !important;
+              max-width: 48mm !important;
+              margin: 0 auto;
+              padding: 1mm 2mm 3mm 2mm;
+              box-sizing: border-box;
+              color: #000000 !important;
               word-break: break-word;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
+              overflow: hidden;
             }
-            * { font-weight: 900 !important; color: #000000 !important; box-sizing: border-box; }
-            b, th, td, p, h2, h3, div { font-weight: 900 !important; color: #000000 !important; }
-            img {
-              max-height: 50px !important;
-              max-width: 140px !important;
+            .text-center { text-align: center; }
+            .logo-img {
+              max-height: 50px;
+              max-width: 120px;
               display: block;
-              margin: 0 auto 4px auto;
+              margin: 0 auto 2px auto;
               object-fit: contain;
-              
+              filter: grayscale(100%);
             }
-            h2, h3, p { margin: 2px 0; text-align: center; text-transform: uppercase; font-weight: 900 !important; }
-            table { width: 100% !important; border-collapse: collapse; margin: 3px 0; table-layout: fixed; }
-            th { border-bottom: 2px solid #000000 !important; text-align: left; padding: 1px 0; font-weight: 900 !important; font-size: 9px !important; }
-            td { font-weight: 900 !important; font-size: 9px !important; }
-            .divider { border-top: 1.5px dashed #000000 !important; margin: 4px 0; }
-            .row { display: flex; justify-content: space-between; font-size: 10px; margin: 2px 0; font-weight: 900 !important; }
+            .store-title {
+              font-size: 13px;
+              font-weight: 900 !important;
+              line-height: 1.2;
+              margin-bottom: 2px;
+              text-align: center;
+              text-transform: uppercase;
+              word-break: break-word;
+            }
+            .store-subtitle {
+              font-size: 9.5px;
+              font-weight: 800 !important;
+              line-height: 1.25;
+              margin-bottom: 2px;
+              text-align: center;
+              word-break: break-word;
+            }
+            .dashed-sep {
+              width: 100%;
+              border-top: 1.5px dashed #000000;
+              margin: 3px 0;
+            }
+            .solid-sep {
+              width: 100%;
+              border-top: 1.5px solid #000000;
+              margin: 3px 0;
+            }
+            .meta-info {
+              font-size: 10px;
+              font-weight: 800 !important;
+              line-height: 1.3;
+              margin: 2px 0;
+            }
+            table {
+              width: 100% !important;
+              max-width: 100% !important;
+              border-collapse: collapse;
+              margin: 2px 0;
+              table-layout: fixed;
+              font-size: 11px;
+            }
+            th {
+              border-bottom: 1.5px solid #000000;
+              padding: 1.5px 0;
+              font-size: 11px;
+              font-weight: 800 !important;
+            }
+            td {
+              padding: 1.5px 0;
+              font-size: 11px;
+              font-weight: 800 !important;
+              vertical-align: top;
+            }
+            .cant-col { width: 14%; text-align: left; }
+            .desc-col { width: 54%; text-align: left; word-break: break-word; }
+            .tot-col { width: 32%; text-align: right; padding-right: 1.5mm; white-space: nowrap; font-family: monospace; }
+            .total-banner {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              font-size: 16px;
+              font-weight: 900 !important;
+              margin: 3px 0;
+              width: 100%;
+            }
+            .total-banner span:last-child {
+              padding-right: 1.5mm;
+              font-family: monospace;
+            }
+            .row-flex {
+              display: flex;
+              justify-content: space-between;
+              font-size: 10.5px;
+              margin: 1px 0;
+              font-weight: 800 !important;
+              width: 100%;
+            }
+            .row-flex span:last-child {
+              padding-right: 1.5mm;
+              font-family: monospace;
+            }
+            .footer-msg {
+              font-size: 10px;
+              font-weight: 800;
+              text-align: center;
+              margin-top: 4px;
+            }
           </style>
         </head>
         <body>
-          ${logoUrl ? `<img src="${logoUrl}" alt="Logo" />` : ''}
-          <h2><b>${companyName.toUpperCase()}</b></h2>
-          ${slogan ? `<p><b>"${slogan.toUpperCase()}"</b></p>` : ''}
-          ${address ? `<p><b>${address.toUpperCase()}</b></p>` : ''}
-          ${phone ? `<p><b>TEL: ${phone}</b></p>` : ''}
-          ${rfcVal ? `<p><b>RFC: ${rfcVal.toUpperCase()}</b></p>` : ''}
-          <div class="divider"></div>
-          <p style="text-align:center; font-weight:900;"><b>*** REIMPRESIÓN TICKET ***</b></p>
-          <p style="text-align:left;"><b>FECHA: ${dateStr}</b></p>
-          <p style="text-align:left;"><b>FOLIO: #${folioStr}</b></p>
-          <p style="text-align:left;"><b>CLIENTE: ${(ticket.clientName || ticket.client || 'PUBLICO GENERAL').toUpperCase()}</b></p>
-          <p style="text-align:left;"><b>MÉTODO PAGO: ${(ticket.paymentMethod || 'EFECTIVO').toUpperCase()}</b></p>
-          <div class="divider"></div>
-          <table>
-            <thead>
-              <tr>
-                <th style="width:12%; text-align:center;"><b>CT</b></th>
-                <th style="width:58%; text-align:left;"><b>DESCRIPCIÓN</b></th>
-                <th style="width:30%; text-align:right;"><b>TOTAL</b></th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemRows}
-            </tbody>
-          </table>
-          <div class="divider"></div>
-          <div class="row"><span><b>TOTAL:</b></span><span><b>$${(ticket.total || 0).toFixed(2)}</b></span></div>
-          ${(ticket.paymentMethod || 'EFECTIVO').toUpperCase() === 'EFECTIVO' ? `
-            <div class="row"><span><b>RECIBIDO:</b></span><span><b>$${recibido.toFixed(2)}</b></span></div>
-            <div class="row"><span><b>CAMBIO:</b></span><span><b>$${cambio.toFixed(2)}</b></span></div>
-          ` : ''}
-          <div class="divider"></div>
-          <p style="text-align:center; margin-top:6px"><b>* GRACIAS POR SU COMPRA *</b></p>
-          <script>
-            window.onload = function() { window.print(); };
-          </script>
+          <div id="ticket-reprint">
+            ${logoUrl ? `<img src="${logoUrl}" class="logo-img" alt="Logo" />` : ''}
+            <p class="store-title">${companyName}</p>
+            <div class="store-subtitle">
+              ${slogan ? `<p>"${slogan}"</p>` : ''}
+              ${address ? `<p>${address}</p>` : ''}
+              ${phone ? `<p>TEL: ${phone}</p>` : ''}
+              ${rfcVal ? `<p>RFC: ${rfcVal}</p>` : ''}
+            </div>
+            <div class="dashed-sep"></div>
+            <p class="text-center store-subtitle" style="letter-spacing:1px; font-size:9px;">*** REIMPRESIÓN TICKET ***</p>
+            <div class="meta-info">
+              <p>FECHA: ${dateStr}</p>
+              <p>FOLIO: #${folioStr}</p>
+              <p>CAJA: ${cajaStr}</p>
+              <p>CAJERO: ${cajeroStr}</p>
+              <p>CLIENTE: ${(ticket.clientName || ticket.client || 'PUBLICO GENERAL').toUpperCase()}</p>
+              <p>MÉTODO PAGO: ${(ticket.paymentMethod || 'EFECTIVO').toUpperCase()}</p>
+            </div>
+            <div class="dashed-sep"></div>
+            <table>
+              <thead>
+                <tr>
+                  <th class="cant-col">CT</th>
+                  <th class="desc-col">DESCRIPCIÓN</th>
+                  <th class="tot-col">TOTAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemRows}
+              </tbody>
+            </table>
+            <div class="solid-sep"></div>
+            <div class="total-banner">
+              <span>TOTAL:</span>
+              <span>$${(ticket.total || 0).toFixed(2)}</span>
+            </div>
+            ${(ticket.paymentMethod || 'EFECTIVO').toUpperCase() === 'EFECTIVO' ? `
+              <div class="row-flex"><span>RECIBIDO:</span><span>$${recibido.toFixed(2)}</span></div>
+              <div class="row-flex"><span>CAMBIO:</span><span>$${cambio.toFixed(2)}</span></div>
+            ` : ''}
+            <div class="dashed-sep"></div>
+            <p class="footer-msg">* GRACIAS POR SU COMPRA *</p>
+          </div>
         </body>
       </html>
-    `);
+    `;
+  };
+  const printViaIframe = (html: string) => {
+    let iframe = document.getElementById('pos-reports-print-iframe') as HTMLIFrameElement;
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = 'pos-reports-print-iframe';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+    }
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!doc) {
+      window.print();
+      return;
+    }
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    setTimeout(() => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch (err) {
+        console.warn('Iframe print detalle:', err);
+        window.print();
+      }
+    }, 250);
   };
 
-  const sendTicketWhatsapp = async (ticket: any) => {
-    let phone = window.prompt('Número de WhatsApp del cliente (10 dígitos):', '') || '';
-    phone = phone.replace(/\D/g, '');
-    if (phone.length < 10) return alert('Número de WhatsApp inválido');
+  const loadPrinters = async () => {
+    if ((window as any).require) {
+      try {
+        const { ipcRenderer } = (window as any).require('electron');
+        const printers = await ipcRenderer.invoke('get-system-printers');
+        if (Array.isArray(printers) && printers.length > 0) {
+          setAvailablePrinters(printers);
+          const saved = localStorage.getItem('nexus_selected_printer');
+          if (!saved || !printers.some((p: any) => p.name === saved)) {
+            const thermal = printers.find((p: any) => {
+              const n = (p.name || '').toLowerCase();
+              return n.includes('pos') || n.includes('ticket') || n.includes('58') || n.includes('80');
+            });
+            const defaultP = printers.find((p: any) => p.isDefault);
+            const chosen = thermal ? thermal.name : (defaultP ? defaultP.name : printers[0].name);
+            setSelectedPrinter(chosen);
+            localStorage.setItem('nexus_selected_printer', chosen);
+          } else {
+            setSelectedPrinter(saved);
+          }
+        }
+      } catch (err) {
+        console.error('Error al detectar impresoras:', err);
+      }
+    }
+  };
 
-    const folioStr = String(ticket.folio || ticket.id || '').replace(/\D/g, '') || '000001';
-    
-    // Generar un div temporal invisible para el PDF
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = getTicketHtmlString(ticket);
-    tempDiv.style.position = 'absolute';
-    tempDiv.style.left = '-9999px';
-    tempDiv.style.top = '-9999px';
-    document.body.appendChild(tempDiv);
+  React.useEffect(() => {
+    loadPrinters();
+  }, []);
+
+  const reimprimirTicket = (ticket: any) => {
+    if (!ticket) return;
+    setTicketToPrint(ticket);
+    setShowPrinterModal(true);
+    loadPrinters();
+  };
+
+  const executePrintTicket = async (ticket: any, printerName: string, isSystemDialog: boolean = false) => {
+    if (!ticket) return;
+    setIsPrinting(true);
+    const html = generateTicketHTML(ticket);
+
+    if (isSystemDialog) {
+      // Usar el flujo directo de iframe nativo del navegador/Electron
+      printViaIframe(html);
+      setPrintFeedback('✓ Diálogo de impresión abierto');
+    } else if ((window as any).require && printerName) {
+      try {
+        const { ipcRenderer } = (window as any).require('electron');
+        const res = await ipcRenderer.invoke('print-ticket-html', {
+          html,
+          deviceName: printerName,
+          silent: true
+        });
+        if (res && res.success === false) {
+          console.warn('Electron print returned false, falling back to iframe:', res.failureReason);
+          printViaIframe(html);
+        } else {
+          setPrintFeedback(`✓ Ticket enviado a: ${printerName}`);
+        }
+      } catch (e) {
+        console.error('Error enviando a Electron print:', e);
+        printViaIframe(html);
+      }
+    } else {
+      printViaIframe(html);
+    }
+
+    if (!isSystemDialog && printerName) {
+      localStorage.setItem('nexus_selected_printer', printerName);
+    }
+
+    setTimeout(() => {
+      setIsPrinting(false);
+      setShowPrinterModal(false);
+      setPrintFeedback(null);
+    }, 1200);
+  };
+
+  const sendTicketWhatsapp = (ticket: any) => {
+    if (!ticket) return;
+    setWaTicket(ticket);
+    const initialPhone = ticket.clientPhone || ticket.telefono || '';
+    setWaPhone(initialPhone);
+    setShowWaModal(true);
+  };
+
+  const confirmSendWhatsapp = () => {
+    if (!waTicket) return;
+    const cleanPhone = waPhone.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      alert('Por favor ingresa un número de WhatsApp válido (10 dígitos).');
+      return;
+    }
 
     try {
-      const el = tempDiv.querySelector('#ticket-print-temp') as HTMLElement;
-      if (el) {
-        const canvas = await html2canvas(el, { scale: 2 });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, canvas.height * (58 / canvas.width)] });
-        pdf.addImage(imgData, 'PNG', 0, 0, 58, canvas.height * (58 / canvas.width));
-        
-        let savedPath = '';
-        if ((window as any).require) {
+      const settings = useSettings.getState();
+      const { pdf, fileName, folioStr } = generateDirectTicketPDF(waTicket, settings);
+
+      if ((window as any).require) {
+        try {
           const fsLib = (window as any).require('fs');
           const pathLib = (window as any).require('path');
           const osLib = (window as any).require('os');
           const desktopPath = pathLib.join(osLib.homedir(), 'Desktop');
-          const fileName = `Ticket_${folioStr}.pdf`;
-          savedPath = pathLib.join(desktopPath, fileName);
+          const savedPath = pathLib.join(desktopPath, fileName);
           const pdfBuffer = pdf.output('arraybuffer');
           fsLib.writeFileSync(savedPath, new Uint8Array(pdfBuffer));
-          alert(`El PDF se ha guardado en tu Escritorio como: ${fileName}\n\nPor favor, adjúntalo en el chat de WhatsApp.`);
-        } else {
-          pdf.save(`Ticket_${folioStr}.pdf`);
-          alert('El PDF se ha descargado. Por favor, adjúntalo en el chat de WhatsApp.');
+        } catch(e) {
+          console.warn('Fallback guardando PDF:', e);
+          pdf.save(fileName);
         }
+      } else {
+        pdf.save(fileName);
       }
-    } catch (e) {
-      console.error("Error generando PDF:", e);
-    } finally {
-      document.body.removeChild(tempDiv);
-    }
 
-    const msg = `🧾 *TICKET DE COMPRA (REIMPRESIÓN)* 🧾\n📌 *FOLIO:* #${folioStr}\n💵 *TOTAL: ${(ticket.total || 0).toFixed(2)} MXN*\n\nTe adjunto tu ticket en formato PDF.`;
-    const waUrl = `https://wa.me/52${phone.slice(-10)}?text=${encodeURIComponent(msg)}`;
-    try {
+      const msg = `🧾 *TICKET DE COMPRA (REIMPRESIÓN)* 🧾\n📌 *FOLIO:* #${folioStr}\n💵 *TOTAL: $${(waTicket.total || 0).toFixed(2)} MXN*\n\nTe comparto tu comprobante de compra en formato PDF. ¡Gracias por tu preferencia!`;
+      const waUrl = `https://wa.me/52${cleanPhone.slice(-10)}?text=${encodeURIComponent(msg)}`;
+
       if ((window as any).require) {
-        const { shell } = (window as any).require('electron');
-        if (shell && shell.openExternal) shell.openExternal(waUrl);
-        else window.open(waUrl, '_blank');
+        try {
+          const { shell } = (window as any).require('electron');
+          if (shell && shell.openExternal) {
+            shell.openExternal(waUrl);
+          } else {
+            window.open(waUrl, '_blank');
+          }
+        } catch(e) {
+          window.open(waUrl, '_blank');
+        }
       } else {
         window.open(waUrl, '_blank');
       }
-    } catch(e) {
-      window.open(waUrl, '_blank');
+
+      setShowWaModal(false);
+      alert(`✓ PDF (${fileName}) generado exitosamente en tu Escritorio / Descargas.\nSe ha abierto WhatsApp para que lo envíes.`);
+    } catch (err: any) {
+      console.error('Error al generar WhatsApp PDF:', err);
+      alert('Error generando PDF: ' + err.message);
     }
   };
 
@@ -3453,6 +3691,177 @@ export default function Reports() {
           </div>
         </div>
       )}
+    
+      {/* MODAL DE SELECCIÓN DE IMPRESORA */}
+      {showPrinterModal && ticketToPrint && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0f172a] border border-nexus-700 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in fade-in zoom-in duration-150">
+            <div className="flex justify-between items-center mb-4 border-b border-nexus-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Printer className="w-5 h-5 text-blue-400" />
+                <h3 className="text-white font-black text-sm uppercase tracking-wide">
+                  Seleccionar Impresora
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowPrinterModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-nexus-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mb-4 bg-nexus-900/60 p-3 rounded-xl border border-nexus-800 text-xs">
+              <div className="flex justify-between text-slate-400 mb-1">
+                <span>Folio:</span>
+                <span className="text-white font-bold">#{ticketToPrint.folio || ticketToPrint.id}</span>
+              </div>
+              <div className="flex justify-between text-slate-400">
+                <span>Total:</span>
+                <span className="text-emerald-400 font-black">${(ticketToPrint.total || 0).toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <label className="block text-slate-300 text-xs font-bold mb-2 uppercase">
+                Impresora de Destino:
+              </label>
+              <select
+                value={selectedPrinter}
+                onChange={(e) => {
+                  setSelectedPrinter(e.target.value);
+                  localStorage.setItem('nexus_selected_printer', e.target.value);
+                }}
+                className="w-full bg-[#1e293b] border border-nexus-600 rounded-xl px-3 py-2.5 text-white text-xs font-semibold focus:outline-none focus:border-blue-500"
+              >
+                {availablePrinters.length > 0 ? (
+                  availablePrinters.map((p: any, idx: number) => (
+                    <option key={idx} value={p.name}>
+                      {p.name} {p.isDefault ? '(Predeterminada de Windows)' : ''}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="POS-58(copy of 2)">POS-58(copy of 2) (Térmica 58mm)</option>
+                    <option value="POS-58">POS-58</option>
+                    <option value="Brother DCP-T520W Printer">Brother DCP-T520W Printer</option>
+                  </>
+                )}
+              </select>
+              <p className="text-[11px] text-slate-400 mt-2">
+                💡 Esta selección se recordará como tu impresora preferida para futuras ventas y reimpresiones.
+              </p>
+            </div>
+
+            {printFeedback && (
+              <div className="mb-4 p-2.5 rounded-xl bg-blue-900/40 border border-blue-500/50 text-blue-200 text-xs text-center font-bold">
+                {printFeedback}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2.5">
+              <button
+                disabled={isPrinting}
+                onClick={() => executePrintTicket(ticketToPrint, selectedPrinter, false)}
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition-all disabled:opacity-50"
+              >
+                <Printer className="w-4 h-4" />
+                {isPrinting ? 'Enviando a impresora...' : 'IMPRIMIR TICKET'}
+              </button>
+
+              <button
+                disabled={isPrinting}
+                onClick={() => executePrintTicket(ticketToPrint, selectedPrinter, true)}
+                className="w-full bg-nexus-800 hover:bg-nexus-700 text-slate-200 border border-nexus-600 py-2.5 rounded-xl font-bold text-xs uppercase flex items-center justify-center gap-2 transition-all"
+              >
+                Abrir Diálogo de Windows
+              </button>
+
+              <button
+                onClick={() => setShowPrinterModal(false)}
+                className="w-full text-slate-400 hover:text-white py-2 text-xs font-bold uppercase transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE WHATSAPP CON PDF */}
+      {showWaModal && waTicket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0f172a] border border-emerald-900/60 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in fade-in zoom-in duration-150">
+            <div className="flex justify-between items-center mb-4 border-b border-nexus-800 pb-3">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-white font-black text-sm uppercase tracking-wide">
+                  Enviar Ticket por WhatsApp
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowWaModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-nexus-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mb-4 bg-nexus-900/60 p-3 rounded-xl border border-nexus-800 text-xs">
+              <div className="flex justify-between text-slate-400 mb-1">
+                <span>Folio del Ticket:</span>
+                <span className="text-white font-bold">#{waTicket.folio || waTicket.id}</span>
+              </div>
+              <div className="flex justify-between text-slate-400 mb-1">
+                <span>Cliente:</span>
+                <span className="text-white font-bold uppercase">{(waTicket.clientName || waTicket.client || 'Público General')}</span>
+              </div>
+              <div className="flex justify-between text-slate-400">
+                <span>Total a Cobrar:</span>
+                <span className="text-emerald-400 font-black">${(waTicket.total || 0).toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <label className="block text-slate-300 text-xs font-bold mb-2 uppercase">
+                Número de WhatsApp (10 dígitos):
+              </label>
+              <input
+                type="tel"
+                placeholder="Ej. 9611234567"
+                value={waPhone}
+                onChange={(e) => setWaPhone(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') confirmSendWhatsapp();
+                }}
+                className="w-full bg-[#1e293b] border border-emerald-700/60 rounded-xl px-4 py-3 text-white text-sm font-mono text-center tracking-wider focus:outline-none focus:border-emerald-500"
+                autoFocus
+              />
+              <p className="text-[11px] text-slate-400 mt-2 text-center">
+                📄 Se generará un PDF en tu Escritorio y se abrirá WhatsApp con el mensaje listo.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2.5">
+              <button
+                onClick={confirmSendWhatsapp}
+                className="w-full bg-[#25D366] hover:bg-[#20b858] text-white py-3.5 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all"
+              >
+                <MessageCircle className="w-4 h-4" />
+                GENERAR PDF Y ABRIR WHATSAPP
+              </button>
+
+              <button
+                onClick={() => setShowWaModal(false)}
+                className="w-full text-slate-400 hover:text-white py-2 text-xs font-bold uppercase transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
