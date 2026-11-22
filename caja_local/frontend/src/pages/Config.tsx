@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useSettings } from '../store/useSettings';
 import { compressImageFile } from '../utils/imageCompressor';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { EscPosBuilder, addLogoToBuilder, buildTicketEscPos } from '../utils/escposHelper';
 
 import { Printer, Server, ShieldCheck, SmartphoneNfc, Download, AlertTriangle, UploadCloud, Search, Save, CreditCard, RefreshCw, Wifi, Laptop, Radio } from 'lucide-react';
 import { db } from '../store/database';
@@ -104,6 +105,41 @@ function parseNum(val: any, defaultNum: number): number {
 
   const handlePrintTestTicket = async () => {
     setTestPrintFeedback('Enviando ticket de prueba...');
+
+    // 1. Impresión directa ESC/POS de alta fidelidad (RAW) en Electron
+    if ((window as any).require && localSettings.ticketPrinterName) {
+      try {
+        const { ipcRenderer } = (window as any).require('electron');
+        const builder = await buildTicketEscPos({
+          folio: 'PRUEBA-001',
+          date: new Date(),
+          caja: localSettings.cajaNombre || 'CAJA 1',
+          cajero: localSettings.activeUser?.name || 'ADMINISTRADOR',
+          clientName: 'PUBLICO GENERAL',
+          paymentMethod: 'EFECTIVO',
+          total: 100.00,
+          recibido: 100.00,
+          cambio: 0.00,
+          isTest: true,
+          items: [
+            { cartQty: 1, name: 'PRODUCTO DE MUESTRA A', price: 50.00, subtotal: 50.00 },
+            { cartQty: 2, name: 'PRODUCTO B CON NOMBRE LARGO QUE BAJA BIEN', price: 25.00, subtotal: 50.00 }
+          ]
+        }, localSettings);
+
+        const res = await ipcRenderer.invoke('print-ticket-raw', {
+          base64Data: builder.toBase64(),
+          deviceName: localSettings.ticketPrinterName
+        });
+
+        if (res && res.success) {
+          setTestPrintFeedback(`✓ Ticket térmico ESC/POS enviado a: ${localSettings.ticketPrinterName}`);
+          return;
+        }
+      } catch (escErr) {
+        console.warn('Detalle con impresión ESC/POS nativa, recurriendo a HTML:', escErr);
+      }
+    }
     const fontFam = localSettings.ticketFontFamily || 'Consolas, monospace';
     const fontWt = localSettings.ticketFontWeight === 'normal' ? '700' : '900';
     const headerAlign = localSettings.ticketHeaderAlign || 'center';

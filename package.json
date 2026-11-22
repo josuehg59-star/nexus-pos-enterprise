@@ -37,12 +37,17 @@
         "to": "sync_server_3008.js"
       },
       {
+        "from": "raw_print.exe",
+        "to": "raw_print.exe"
+      },
+      {
         "from": "caja_movil_app/dist",
         "to": "caja_movil_app/dist"
       }
     ],
     "files": [
       "main.js",
+      "raw_print.exe",
       "package.json",
       "sync_server_3008.js",
       "mobile_web_server.js",

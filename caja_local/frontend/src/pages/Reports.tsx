@@ -5,6 +5,7 @@ import { generateDirectTicketPDF } from '../utils/ticketPdf';
 import { db } from '../store/database';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useSettings } from '../store/useSettings';
+import { buildTicketEscPos } from '../utils/escposHelper';
 import { 
   Filter, Printer, FileSpreadsheet, MessageCircle, 
   RefreshCcw, Eye, X, Receipt, TrendingUp, BarChart3, BarChart2, Search, Edit,
@@ -1041,6 +1042,61 @@ function resolveTicketPx(val: any, defaultPx: number): string {
   const executePrintTicket = async (ticket: any, printerName: string, isSystemDialog: boolean = false) => {
     if (!ticket) return;
     setIsPrinting(true);
+
+    // 1. Impresión directa nativa térmica ESC/POS (RAW) en Electron
+    if (!isSystemDialog && (window as any).require && printerName) {
+      try {
+        const { ipcRenderer } = (window as any).require('electron');
+        const settings = useSettings.getState();
+        let rawItems = [];
+        try {
+          rawItems = typeof ticket.items === 'string' ? JSON.parse(ticket.items) : (ticket.items || ticket.cart || []);
+        } catch(e) {
+          rawItems = ticket.items || ticket.cart || [];
+        }
+
+        const builder = await buildTicketEscPos({
+          folio: ticket.folio || ticket.id,
+          date: ticket.date ? new Date(ticket.date) : new Date(),
+          caja: ticket.caja || settings.cajaNombre || 'CAJA 1 - PRINCIPAL',
+          cajero: ticket.cajero || settings.activeUser?.name || 'ADMINISTRADOR',
+          clientName: ticket.clientName || 'PUBLICO GENERAL',
+          paymentMethod: ticket.paymentMethod,
+          montoEfectivo: ticket.montoEfectivo,
+          montoTarjeta: ticket.montoTarjeta,
+          montoTransferencia: ticket.montoTransferencia,
+          metodoMixtoSecundario: ticket.metodoMixtoSecundario,
+          recibido: ticket.recibido,
+          cambio: ticket.cambio,
+          total: ticket.total || 0,
+          items: (rawItems || []).map((it: any) => ({
+            cartQty: it.cartQty || it.qty || 1,
+            name: it.name || it.productName || 'PRODUCTO',
+            price: it.price || 0,
+            subtotal: it.subtotal !== undefined ? it.subtotal : (it.total !== undefined ? it.total : (it.cartQty || it.qty || 1) * (it.price || 0))
+          }))
+        }, settings);
+
+        const res = await ipcRenderer.invoke('print-ticket-raw', {
+          base64Data: builder.toBase64(),
+          deviceName: printerName
+        });
+
+        if (res && res.success) {
+          setPrintFeedback(`✓ Ticket térmico enviado a: ${printerName}`);
+          localStorage.setItem('nexus_selected_printer', printerName);
+          setTimeout(() => {
+            setIsPrinting(false);
+            setShowPrinterModal(false);
+            setPrintFeedback(null);
+          }, 1200);
+          return;
+        }
+      } catch (rawErr) {
+        console.warn("Detalle con impresión ESC/POS nativa en Reports, intentando fallback:", rawErr);
+      }
+    }
+
     const html = generateTicketHTML(ticket);
 
     if (isSystemDialog) {

@@ -131,6 +131,52 @@ ipcMain.handle('get-system-printers', async (event) => {
   }
 });
 
+// Impresión térmica directa RAW (ESC/POS nativo de alta velocidad, sin miniaturización)
+ipcMain.handle('print-ticket-raw', async (event, { base64Data, deviceName }) => {
+  try {
+    if (!deviceName || !base64Data) {
+      return { success: false, error: 'Falta nombre de impresora o datos del ticket' };
+    }
+    const { execFile } = require('child_process');
+    const fs = require('fs');
+    const os = require('os');
+    const path = require('path');
+
+    const buffer = Buffer.from(base64Data, 'base64');
+    const tempFile = path.join(os.tmpdir(), `ticket_${Date.now()}_${Math.random().toString(36).substring(7)}.bin`);
+    fs.writeFileSync(tempFile, buffer);
+
+    const candidates = [
+      path.join(__dirname, 'raw_print.exe'),
+      path.join(process.resourcesPath || '', 'raw_print.exe'),
+      'C:\\Users\\JOSUE\\Desktop\\NEXUS_POS_ENTERPRISE\\raw_print.exe',
+      path.join('C:', 'Users', 'JOSUE', 'AppData', 'Local', 'Programs', 'NEXUS POS ENTERPRISE', 'resources', 'raw_print.exe')
+    ];
+    const exePath = candidates.find(p => p && fs.existsSync(p));
+
+    if (!exePath) {
+      console.error('[NEXUS RAW PRINT]: No se encontró raw_print.exe');
+      return { success: false, error: 'No se encontró el ejecutable raw_print.exe' };
+    }
+
+    return new Promise((resolve) => {
+      execFile(exePath, [deviceName, tempFile], (err) => {
+        try { fs.unlinkSync(tempFile); } catch(e) {}
+        if (err) {
+          console.error('[NEXUS RAW PRINT ERROR]:', err);
+          resolve({ success: false, error: err.message });
+        } else {
+          console.log('[NEXUS RAW PRINT SUCCESS] Ticket enviado con éxito a:', deviceName);
+          resolve({ success: true });
+        }
+      });
+    });
+  } catch (err) {
+    console.error('Error general en print-ticket-raw:', err);
+    return { success: false, error: err.message };
+  }
+});
+
 ipcMain.handle('print-ticket-html', async (event, { html, deviceName, silent, copies, ticketWidth }) => {
   try {
     const is80 = ticketWidth === '80mm';

@@ -12,6 +12,7 @@ import {
 import { useLiveQuery } from 'dexie-react-hooks';
 import { usePosStore, lineTotal } from '../store/useStore';
 import { useSettings } from '../store/useSettings';
+import { buildTicketEscPos } from '../utils/escposHelper';
 import { useLiveSyncStore } from '../store/liveSyncEngine';
 import { db } from '../store/database';
 import { productIndex } from '../store/productIndex';
@@ -767,8 +768,62 @@ function resolveTicketPx(val: any, defaultPx: number): string {
   const headerAlign = ticketHeaderAlign || 'center';
   const wordWrapMode = ticketWordWrap === false ? 'normal' : 'break-word';
 
-  const printTicket = () => {
+  const printTicket = async () => {
     try {
+      // 1. Impresión térmica nativa directa ESC/POS de alta fidelidad (RAW) en Electron
+      if ((window as any).require && ticketPrinterName && lastTicket) {
+        try {
+          const { ipcRenderer } = (window as any).require('electron');
+          const builder = await buildTicketEscPos({
+            folio: lastTicket.folio,
+            date: lastTicket.date ? new Date(lastTicket.date) : new Date(),
+            caja: lastTicket.caja || cajaNombre || 'CAJA 1 - PRINCIPAL',
+            cajero: lastTicket.cajero || activeUser?.name || 'ADMINISTRADOR',
+            clientName: lastTicket.clientName || 'PUBLICO GENERAL',
+            paymentMethod: lastTicket.paymentMethod,
+            montoEfectivo: lastTicket.montoEfectivo,
+            montoTarjeta: lastTicket.montoTarjeta,
+            montoTransferencia: lastTicket.montoTransferencia,
+            metodoMixtoSecundario: lastTicket.metodoMixtoSecundario,
+            recibido: lastTicket.recibido,
+            cambio: lastTicket.cambio,
+            total: lastTicket.total || 0,
+            items: (lastTicket.items || lastTicket.cart || []).map((it: any) => ({
+              cartQty: it.cartQty || it.qty || 1,
+              name: it.name || it.productName || 'PRODUCTO',
+              price: it.price || 0,
+              subtotal: (it.cartQty || it.qty || 1) * (it.price || 0)
+            }))
+          }, {
+            nombreNegocio,
+            rfc,
+            eslogan,
+            telefono,
+            direccion,
+            logo,
+            ticketShowLogo,
+            cajaNombre,
+            activeUser,
+            ticketCharsPerLine,
+            ticketWidth,
+            ticketFeedLines,
+            ticketTitleSize,
+            ticketHeaderAlign
+          });
+
+          const res = await ipcRenderer.invoke('print-ticket-raw', {
+            base64Data: builder.toBase64(),
+            deviceName: ticketPrinterName
+          });
+
+          if (res && res.success) {
+            return;
+          }
+        } catch (rawErr) {
+          console.warn("Detalle con impresión ESC/POS nativa en PosTerminal, intentando fallback HTML:", rawErr);
+        }
+      }
+
       const el = document.getElementById('ticket-print');
       if (!el) return;
 
