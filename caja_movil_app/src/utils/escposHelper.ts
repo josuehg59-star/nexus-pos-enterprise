@@ -85,6 +85,12 @@ export class EscPosBuilder {
     return this;
   }
 
+  // Tipo de fuente de hardware: 'A' (estándar 12x24) o 'B' (pequeña 9x17)
+  font(type: 'A' | 'B' = 'A'): this {
+    this.buffer.push(0x1B, 0x4D, type === 'B' ? 0x01 : 0x00); // ESC M n
+    return this;
+  }
+
   // Tamaño de fuente: 'normal', 'double_h' (doble alto), 'double_w' (doble ancho), 'double_both' (gigante)
   size(mode: 'normal' | 'double_h' | 'double_w' | 'double_both' = 'normal'): this {
     let val = 0x00;
@@ -341,6 +347,9 @@ export async function buildTicketEscPos(
   const builder = new EscPosBuilder(chars);
 
   const titleSz = parseNum(settings.ticketTitleSize, 22);
+  const detailSz = parseNum(settings.ticketDetailSize, 14);
+  const fontSz = parseNum(settings.ticketFontSize, 16);
+  const totalSz = parseNum(settings.ticketTotalSize, 26);
   const isBold = settings.ticketFontWeight !== 'normal';
   const headerAlign = settings.ticketHeaderAlign || 'center';
 
@@ -353,19 +362,26 @@ export async function buildTicketEscPos(
   // 2. Encabezado de la Tienda (Alineación y Tamaños dinámicos del usuario)
   builder.align(headerAlign);
 
-  if (titleSz <= 13) {
-    builder.size('normal').bold(isBold);
-  } else if (titleSz <= 22) {
-    builder.size('double_h').bold(isBold);
+  // Título de la tienda según tamaño numérico configurado por el usuario
+  if (titleSz <= 11) {
+    builder.font('B').size('normal').bold(isBold);
+  } else if (titleSz <= 16) {
+    builder.font('A').size('normal').bold(isBold);
+  } else if (titleSz <= 24) {
+    builder.font('A').size('double_h').bold(isBold);
   } else {
-    builder.size(is80 ? 'double_both' : 'double_h').bold(isBold);
+    builder.font('A').size(is80 ? 'double_both' : 'double_h').bold(isBold);
   }
 
   const storeName = settings.nombreNegocio || 'MI TIENDITA';
   builder.line(storeName);
 
-  builder.size('normal');
-  builder.bold(false);
+  // Datos de la tienda (slogan, dirección, teléfono, RFC) según tamaño configurado
+  if (detailSz <= 11) {
+    builder.font('B').size('normal').bold(isBold);
+  } else {
+    builder.font('A').size('normal').bold(isBold);
+  }
 
   if (settings.eslogan) {
     builder.line(`"${settings.eslogan}"`);
@@ -380,16 +396,18 @@ export async function buildTicketEscPos(
     builder.line(`RFC: ${settings.rfc}`);
   }
 
+  builder.font('A').size('normal').bold(false);
   builder.separator('-');
 
   // 3. Indicador si es ticket de prueba
   if (data.isTest) {
-    builder.align('center').bold(true).line('*** TICKET DE PRUEBA ***').bold(false);
+    builder.align('center').bold(true).line('*** TICKET DE PRUEBA ***').bold(isBold);
     builder.separator('-');
   }
 
   // 4. Metadatos del Ticket (Fecha, Folio, Caja, Cajero, Cliente)
   builder.align('left');
+  builder.font('A').size('normal').bold(isBold);
 
   const dStr = data.date
     ? (typeof data.date === 'string' ? data.date : data.date.toLocaleString('es-MX'))
@@ -408,12 +426,18 @@ export async function buildTicketEscPos(
 
   // 5. Encabezado de Productos
   builder.bold(true);
+  if (fontSz <= 11) {
+    builder.font('B');
+  } else {
+    builder.font('A');
+  }
+
   if (is80) {
     builder.line('CANT DESCRIPCION                                 TOTAL');
   } else {
     builder.line('CT  DESCRIPCION            TOTAL');
   }
-  builder.bold(false);
+  builder.bold(isBold);
   builder.separator('-');
 
   // 6. Lista de Artículos (con separación limpia y salto de renglón de descripción)
@@ -430,13 +454,18 @@ export async function buildTicketEscPos(
     }
   }
 
+  builder.font('A').size('normal').bold(false);
   builder.separator('=');
 
-  // 7. Totales (TOTAL en Doble Altura con '$ ' bien separado)
+  // 7. Totales (TOTAL con '$ ' bien separado)
   builder.align('left');
-  builder.size('double_h').bold(true);
+  if (totalSz <= 16) {
+    builder.font('A').size('normal').bold(true);
+  } else {
+    builder.font('A').size('double_h').bold(true);
+  }
   builder.row('TOTAL:', `$ ${Number(data.total || 0).toFixed(2)}`);
-  builder.size('normal').bold(false);
+  builder.size('normal').bold(isBold);
 
   if (data.paymentMethod === 'EFECTIVO' || data.recibido !== undefined) {
     const rec = data.recibido !== undefined ? Number(data.recibido) : Number(data.total);
@@ -444,7 +473,7 @@ export async function buildTicketEscPos(
     builder.row('RECIBIDO:', `$ ${Number(rec).toFixed(2)}`);
     builder.row('CAMBIO:', `$ ${Number(cam).toFixed(2)}`);
   } else if (data.paymentMethod === 'MIXTO') {
-    builder.align('center').bold(true).line('PAGO MIXTO').bold(false).align('left');
+    builder.align('center').bold(true).line('PAGO MIXTO').bold(isBold).align('left');
     const efec = Number(data.montoEfectivo || 0);
     builder.row('EFECTIVO:', `$ ${efec.toFixed(2)}`);
     const secName = data.metodoMixtoSecundario || 'TARJETA:';

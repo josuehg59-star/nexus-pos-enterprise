@@ -82,6 +82,31 @@ export default function Config() {
     fetchPrinters();
   }, []);
 
+  useEffect(() => {
+    setLocalSettings(prev => ({
+      ...prev,
+      nombreNegocio: nombreNegocio || prev.nombreNegocio,
+      rfc: rfc || prev.rfc,
+      eslogan: eslogan || prev.eslogan,
+      telefono: telefono || prev.telefono,
+      email: email || prev.email,
+      direccion: direccion || prev.direccion,
+      ticketPrinterName: ticketPrinterName || prev.ticketPrinterName,
+      ticketFontFamily: ticketFontFamily || prev.ticketFontFamily,
+      ticketFontWeight: ticketFontWeight || prev.ticketFontWeight,
+      ticketTitleSize: ticketTitleSize || prev.ticketTitleSize,
+      ticketDetailSize: ticketDetailSize || prev.ticketDetailSize,
+      ticketFontSize: ticketFontSize || prev.ticketFontSize,
+      ticketTotalSize: ticketTotalSize || prev.ticketTotalSize,
+      ticketWidth: ticketWidth || prev.ticketWidth,
+      ticketCharsPerLine: ticketCharsPerLine || prev.ticketCharsPerLine,
+      ticketFeedLines: ticketFeedLines || prev.ticketFeedLines,
+      ticketHeaderAlign: ticketHeaderAlign || prev.ticketHeaderAlign,
+      ticketWordWrap: ticketWordWrap !== false,
+      ticketShowLogo: ticketShowLogo !== false
+    }));
+  }, [nombreNegocio, rfc, eslogan, telefono, email, direccion, ticketPrinterName, ticketFontFamily, ticketFontWeight, ticketTitleSize, ticketDetailSize, ticketFontSize, ticketTotalSize, ticketWidth, ticketCharsPerLine, ticketFeedLines, ticketHeaderAlign, ticketWordWrap, ticketShowLogo]);
+
 function resolvePx(val: any, defaultPx: number): string {
   if (!val) return `${defaultPx}px`;
   if (typeof val === 'number') return `${val}px`;
@@ -105,6 +130,29 @@ function parseNum(val: any, defaultNum: number): number {
 
   const handlePrintTestTicket = async () => {
     setTestPrintFeedback('Enviando ticket de prueba...');
+
+    // Guardar automáticamente los ajustes actuales al probar
+    setSettings({
+      nombreNegocio: localSettings.nombreNegocio,
+      rfc: localSettings.rfc,
+      eslogan: localSettings.eslogan,
+      direccion: localSettings.direccion,
+      telefono: localSettings.telefono,
+      email: localSettings.email,
+      ticketPrinterName: localSettings.ticketPrinterName,
+      ticketFontFamily: localSettings.ticketFontFamily,
+      ticketFontWeight: localSettings.ticketFontWeight,
+      ticketTitleSize: localSettings.ticketTitleSize,
+      ticketDetailSize: localSettings.ticketDetailSize,
+      ticketFontSize: localSettings.ticketFontSize,
+      ticketTotalSize: localSettings.ticketTotalSize,
+      ticketWidth: localSettings.ticketWidth,
+      ticketCharsPerLine: Number(localSettings.ticketCharsPerLine) || 32,
+      ticketFeedLines: Number(localSettings.ticketFeedLines) || 3,
+      ticketHeaderAlign: localSettings.ticketHeaderAlign || 'center',
+      ticketWordWrap: localSettings.ticketWordWrap !== false,
+      ticketShowLogo: localSettings.ticketShowLogo
+    });
 
     // 1. Impresión directa ESC/POS de alta fidelidad (RAW) en Electron
     if ((window as any).require && localSettings.ticketPrinterName) {
