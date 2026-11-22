@@ -808,7 +808,12 @@ function resolveTicketPx(val: any, defaultPx: number): string {
             ticketWidth,
             ticketFeedLines,
             ticketTitleSize,
-            ticketHeaderAlign
+            ticketDetailSize,
+            ticketFontSize,
+            ticketTotalSize,
+            ticketFontWeight,
+            ticketHeaderAlign,
+            ticketWordWrap
           });
 
           const res = await ipcRenderer.invoke('print-ticket-raw', {

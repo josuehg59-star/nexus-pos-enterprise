@@ -43,7 +43,12 @@ export interface TicketSettings {
   ticketWidth?: '58mm' | '80mm';
   ticketFeedLines?: number;
   ticketTitleSize?: number | string;
+  ticketDetailSize?: number | string;
+  ticketFontSize?: number | string;
+  ticketTotalSize?: number | string;
+  ticketFontWeight?: string;
   ticketHeaderAlign?: 'left' | 'center' | 'right';
+  ticketWordWrap?: boolean;
 }
 
 export class EscPosBuilder {
@@ -60,6 +65,12 @@ export class EscPosBuilder {
     this.buffer.push(0x1B, 0x40); // ESC @
     // Seleccionar tabla de caracteres multilingüe (CP850 / Latin-1)
     this.buffer.push(0x1B, 0x74, 0x02); // ESC t 2
+    return this;
+  }
+
+  // Selección de fuente física: 'A' (12x24 estándar) o 'B' (9x17 condensada / pequeña)
+  font(mode: 'A' | 'B' = 'A'): this {
+    this.buffer.push(0x1B, 0x4D, mode === 'B' ? 0x01 : 0x00); // ESC M n
     return this;
   }
 
@@ -287,7 +298,13 @@ export async function addLogoToBuilder(
   });
 }
 
-// Generador completo de ticket ESC/POS
+function parseNum(val: any, def: number): number {
+  if (typeof val === 'number') return isNaN(val) ? def : val;
+  const n = parseInt(String(val), 10);
+  return isNaN(n) ? def : n;
+}
+
+// Generador completo de ticket ESC/POS con soporte dinámico para todas las configuraciones del usuario
 export async function buildTicketEscPos(
   data: TicketData,
   settings: TicketSettings
@@ -296,19 +313,39 @@ export async function buildTicketEscPos(
   const chars = settings.ticketCharsPerLine || (is80 ? 48 : 32);
   const builder = new EscPosBuilder(chars);
 
+  const titleSz = parseNum(settings.ticketTitleSize, 22);
+  const detailSz = parseNum(settings.ticketDetailSize, 12);
+  const contentSz = parseNum(settings.ticketFontSize, 12);
+  const totalSz = parseNum(settings.ticketTotalSize, 22);
+  const isBold = settings.ticketFontWeight !== 'normal';
+  const headerAlign = settings.ticketHeaderAlign || 'center';
+
   // 1. Logotipo (si está activado y existe)
   const resolvedLogo = settings.logo || (typeof localStorage !== 'undefined' ? (localStorage.getItem('ticketLogo') || localStorage.getItem('logo') || '') : '');
   if (settings.ticketShowLogo !== false && resolvedLogo) {
     await addLogoToBuilder(builder, resolvedLogo, settings.ticketWidth || '58mm');
   }
 
-  // 2. Encabezado de la Tienda (Centrado, Nombre en Doble Altura elegante - un poquito más chica que gigante)
-  builder.align('center');
-  builder.size('double_h').bold(true);
+  // 2. Encabezado de la Tienda (Alineación y Tamaños dinámicos del usuario)
+  builder.align(headerAlign);
+
+  // Tamaño del Título según la configuración numérica del usuario
+  if (titleSz <= 13) {
+    builder.font(titleSz < 11 ? 'B' : 'A').size('normal').bold(isBold);
+  } else if (titleSz <= 22) {
+    builder.font('A').size('double_h').bold(isBold);
+  } else {
+    builder.font('A').size(is80 ? 'double_both' : 'double_h').bold(isBold);
+  }
+
   const storeName = settings.nombreNegocio || 'MI TIENDITA';
   builder.line(storeName);
 
-  builder.size('normal').bold(false);
+  // Datos de la Tienda (Eslogan, Dirección, Teléfono, RFC) con tamaño y negrita configurados
+  builder.size('normal');
+  builder.font(detailSz < 12 ? 'B' : 'A');
+  builder.bold(isBold && detailSz >= 14);
+
   if (settings.eslogan) {
     builder.line(`"${settings.eslogan}"`);
   }
@@ -322,6 +359,8 @@ export async function buildTicketEscPos(
     builder.line(`RFC: ${settings.rfc}`);
   }
 
+  builder.bold(false);
+  builder.font('A');
   builder.separator('-');
 
   // 3. Indicador si es ticket de prueba
@@ -332,6 +371,9 @@ export async function buildTicketEscPos(
 
   // 4. Metadatos del Ticket (Fecha, Folio, Caja, Cajero, Cliente)
   builder.align('left');
+  builder.font(detailSz < 12 ? 'B' : 'A');
+  builder.bold(isBold && detailSz >= 14);
+
   const dStr = data.date
     ? (typeof data.date === 'string' ? data.date : data.date.toLocaleString('es-MX'))
     : new Date().toLocaleString('es-MX');
@@ -345,19 +387,24 @@ export async function buildTicketEscPos(
     builder.line(`PAGO: ${data.paymentMethod}`);
   }
 
+  builder.bold(false);
+  builder.font('A');
   builder.separator('-');
 
   // 5. Encabezado de Productos
-  builder.bold(true);
+  builder.font(contentSz < 12 ? 'B' : 'A');
+  builder.bold(isBold);
   if (is80) {
     builder.line('CANT DESCRIPCION                                 TOTAL');
   } else {
     builder.line('CT  DESCRIPCION            TOTAL');
   }
   builder.bold(false);
+  builder.font('A');
   builder.separator('-');
 
-  // 6. Lista de Artículos
+  // 6. Lista de Artículos (adaptados al tamaño configurado)
+  builder.font(contentSz < 12 ? 'B' : 'A');
   for (const item of (data.items || [])) {
     const qty = item.cartQty || item.qty || 1;
     const price = item.price || 0;
@@ -371,13 +418,23 @@ export async function buildTicketEscPos(
     }
   }
 
+  builder.font('A');
   builder.separator('=');
 
-  // 7. Totales (TOTAL en Doble Altura + Negrita)
-  builder.size('double_h').bold(true);
+  // 7. Totales (según tamaño numérico de Total configurado por el usuario)
+  builder.align('left');
+  if (totalSz <= 13) {
+    builder.font(totalSz < 11 ? 'B' : 'A').size('normal').bold(isBold);
+  } else if (totalSz <= 22) {
+    builder.font('A').size('double_h').bold(isBold);
+  } else {
+    builder.font('A').size(is80 ? 'double_both' : 'double_h').bold(isBold);
+  }
+
   builder.row('TOTAL:', `$${Number(data.total || 0).toFixed(2)}`);
   builder.size('normal').bold(false);
 
+  builder.font(detailSz < 12 ? 'B' : 'A');
   if (data.paymentMethod === 'EFECTIVO' || data.recibido !== undefined) {
     const rec = data.recibido !== undefined ? Number(data.recibido) : Number(data.total);
     const cam = data.cambio !== undefined ? Number(data.cambio) : Math.max(0, rec - Number(data.total));
@@ -397,15 +454,20 @@ export async function buildTicketEscPos(
     }
   }
 
+  builder.font('A');
   builder.separator('-');
 
   // 8. Mensaje de Despedida Centrado
-  builder.align('center').bold(true);
+  builder.align('center');
+  builder.font(detailSz < 12 ? 'B' : 'A');
+  builder.bold(isBold);
   builder.line('* GRACIAS POR SU COMPRA *');
   builder.bold(false);
+  builder.font('A');
 
-  // 9. Avance y Corte de Papel
-  builder.feed(settings.ticketFeedLines || 4);
+  // 9. Avance y Corte de Papel configurado
+  const feedCount = Math.max(1, Math.min(10, parseNum(settings.ticketFeedLines, 3)));
+  builder.feed(feedCount);
   builder.cut();
 
   return builder;
