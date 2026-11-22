@@ -266,6 +266,17 @@ export class EscPosBuilder {
     return this;
   }
 
+  // Apertura de cajón de dinero (Pulso eléctrico al puerto RJ11/RJ12 pines 2 y 5)
+  openDrawer(): this {
+    // 1. ESC p m t1 t2 (Estándar ESC/POS pines 2 y 5)
+    this.buffer.push(0x1B, 0x70, 0x00, 0x19, 0xFA);
+    this.buffer.push(0x1B, 0x70, 0x01, 0x19, 0xFA);
+    // 2. DLE DC4 real-time kick pulse (impresoras térmicas POS-58 y POS-80)
+    this.buffer.push(0x10, 0x14, 0x01, 0x00, 0x05);
+    this.buffer.push(0x10, 0x14, 0x01, 0x01, 0x05);
+    return this;
+  }
+
   // Corte de papel (parcial / total)
   cut(): this {
     this.buffer.push(0x1D, 0x56, 0x42, 0x00); // GS V B 0
@@ -494,10 +505,35 @@ export async function buildTicketEscPos(
   builder.line('* GRACIAS POR SU COMPRA *');
   builder.bold(false);
 
-  // 9. Avance y Corte de Papel configurado
+  // 9. Apertura de cajón de dinero (Pulso eléctrico RJ11 pines 2 y 5)
+  builder.openDrawer();
+
+  // 10. Avance y Corte de Papel configurado
   const feedCount = Math.max(1, Math.min(10, parseNum(settings.ticketFeedLines, 3)));
   builder.feed(feedCount);
   builder.cut();
 
   return builder;
+}
+
+// Función independiente para abrir cajón de dinero (botón manual o atajo F3)
+export async function openCashDrawer(printerName?: string): Promise<boolean> {
+  const pName = printerName || (typeof localStorage !== 'undefined' ? (localStorage.getItem('nexus_selected_printer') || '') : '');
+  if (!pName) return false;
+  try {
+    const builder = new EscPosBuilder();
+    builder.openDrawer();
+    if ((window as any).require) {
+      const { ipcRenderer } = (window as any).require('electron');
+      await ipcRenderer.invoke('print-ticket-raw', {
+        base64Data: builder.toBase64(),
+        deviceName: pName
+      });
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.warn('Error al abrir cajón de dinero:', err);
+    return false;
+  }
 }

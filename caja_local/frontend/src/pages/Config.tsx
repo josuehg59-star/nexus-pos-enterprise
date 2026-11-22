@@ -2,9 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { useSettings } from '../store/useSettings';
 import { compressImageFile } from '../utils/imageCompressor';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { EscPosBuilder, addLogoToBuilder, buildTicketEscPos } from '../utils/escposHelper';
+import { EscPosBuilder, addLogoToBuilder, buildTicketEscPos, openCashDrawer } from '../utils/escposHelper';
 
-import { Printer, Server, ShieldCheck, SmartphoneNfc, Download, AlertTriangle, UploadCloud, Search, Save, CreditCard, RefreshCw, Wifi, Laptop, Radio } from 'lucide-react';
+import { Printer, Server, ShieldCheck, SmartphoneNfc, Download, AlertTriangle, UploadCloud, Search, Save, CreditCard, RefreshCw, Wifi, Laptop, Radio, Unlock } from 'lucide-react';
 import { db } from '../store/database';
 import { buildBackup, downloadBackupFile, restoreBackup, backupToDisk } from '../store/backup';
 
@@ -1730,6 +1730,23 @@ function parseNum(val: any, defaultNum: number): number {
                     className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 active:scale-95 transition-all cursor-pointer"
                   >
                     <Printer className="w-5 h-5" /> IMPRIMIR TICKET DE PRUEBA
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setTestPrintFeedback('Enviando pulso de apertura al cajón...');
+                      const ok = await openCashDrawer(localSettings.ticketPrinterName);
+                      if (ok) {
+                        setTestPrintFeedback('✓ Pulso de apertura enviado al cajón');
+                      } else {
+                        setTestPrintFeedback('⚠️ Selecciona tu impresora para probar el cajón');
+                      }
+                      setTimeout(() => setTestPrintFeedback(null), 3500);
+                    }}
+                    className="w-full py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-amber-600/30 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Unlock className="w-4 h-4" /> PROBAR APERTURA DE CAJÓN
                   </button>
                   {testPrintFeedback && (
                     <p className="text-center text-xs font-bold text-emerald-400 animate-pulse">{testPrintFeedback}</p>

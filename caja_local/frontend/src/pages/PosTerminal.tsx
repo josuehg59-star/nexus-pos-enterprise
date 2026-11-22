@@ -7,12 +7,12 @@ import {
   ClipboardList, Search, User, Wallet,
   CreditCard, Banknote, Smartphone, PauseCircle,
   CheckCircle2, Bolt, Droplet, ArrowDownToLine, ShoppingCart, Wifi,
-  X, Printer, List, ShieldCheck, Lock, UserCheck, SmartphoneNfc, Layers
+  X, Printer, List, ShieldCheck, Lock, UserCheck, SmartphoneNfc, Layers, Unlock
 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { usePosStore, lineTotal } from '../store/useStore';
 import { useSettings } from '../store/useSettings';
-import { buildTicketEscPos } from '../utils/escposHelper';
+import { buildTicketEscPos, openCashDrawer } from '../utils/escposHelper';
 import { useLiveSyncStore } from '../store/liveSyncEngine';
 import { db } from '../store/database';
 import { productIndex } from '../store/productIndex';
@@ -704,6 +704,7 @@ export default function PosTerminal() {
       setLastTicket(ticket);
       setShowMixtoModal(false);
       setShowTicketModal(true);
+      openCashDrawer(ticketPrinterName);
       setMontoRecibido('');
       setMixtoEfectivo('');
       setMixtoEfectivoRecibido('');
@@ -733,6 +734,7 @@ export default function PosTerminal() {
       setLastTicket(ticket);
       setIsProcessing(false);
       setShowTicketModal(true);
+      openCashDrawer(ticketPrinterName);
       setMontoRecibido('');
       setPaymentMethod('EFECTIVO');
       setClient({ name: 'PUBLICO GENERAL', monedero: 0, id: 0 });
@@ -1066,6 +1068,7 @@ function resolveTicketPx(val: any, defaultPx: number): string {
 // Atajos de teclado
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F3') { e.preventDefault(); openCashDrawer(ticketPrinterName); }
       if (e.key === 'F4') { e.preventDefault(); setShowNegadoModal(true); }
       if (e.key === 'F1') { e.preventDefault(); searchInputRef.current?.focus(); }
       if (e.key === 'F6') { e.preventDefault(); handlePaymentClick('EFECTIVO'); }
@@ -1840,9 +1843,10 @@ function resolveTicketPx(val: any, defaultPx: number): string {
               </div>
             </div>
             {/* ACCIONES DEL TICKET */}
-            <div className="flex gap-3 mb-6">
-              <button onClick={sendWhatsapp} className="flex-1 bg-[#10b981] hover:bg-[#059669] text-white py-3 rounded-xl font-black text-xs uppercase flex justify-center items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"> <Smartphone className="w-4 h-4" /> PDF / WHATSAPP </button>
-              <button onClick={printTicket} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-600/20 transition-colors flex items-center justify-center gap-2"> <Printer className="w-4 h-4" /> IMPRIMIR TICKET [P / F2] </button>
+            <div className="flex gap-2.5 mb-6">
+              <button onClick={sendWhatsapp} className="flex-1 bg-[#10b981] hover:bg-[#059669] text-white py-3 rounded-xl font-black text-xs uppercase flex justify-center items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"> <Smartphone className="w-4 h-4" /> PDF / WHATSAPP </button>
+              <button onClick={() => openCashDrawer(ticketPrinterName)} className="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-3 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-600/20 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"> <Unlock className="w-4 h-4" /> ABRIR CAJÓN [F3] </button>
+              <button onClick={printTicket} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-blue-600/20 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"> <Printer className="w-4 h-4" /> TICKET [P / F2] </button>
             </div>
             <div className="flex gap-4 mt-auto">
               <button 
