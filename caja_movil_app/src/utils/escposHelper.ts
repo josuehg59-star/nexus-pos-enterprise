@@ -62,15 +62,13 @@ export class EscPosBuilder {
 
   // Inicializar impresora térmica
   init(): this {
-    this.buffer.push(0x1B, 0x40); // ESC @
+    this.buffer.push(0x1B, 0x40); // ESC @ (Reset)
+    // Seleccionar juego de caracteres internacional USA (0x24 = '$' garantizado, nunca ¥)
+    this.buffer.push(0x1B, 0x52, 0x00); // ESC R 0
     // Seleccionar tabla de caracteres multilingüe (CP850 / Latin-1)
     this.buffer.push(0x1B, 0x74, 0x02); // ESC t 2
-    return this;
-  }
-
-  // Selección de fuente física: 'A' (12x24 estándar) o 'B' (9x17 condensada / pequeña)
-  font(mode: 'A' | 'B' = 'A'): this {
-    this.buffer.push(0x1B, 0x4D, mode === 'B' ? 0x01 : 0x00); // ESC M n
+    // Asegurar Fuente A (estándar limpia 12x24 dots, 32 columnas de ancho completo)
+    this.buffer.push(0x1B, 0x4D, 0x00); // ESC M 0
     return this;
   }
 
@@ -99,6 +97,7 @@ export class EscPosBuilder {
 
   // Convertir caracteres en español a bytes CP850
   private encodeChar(char: string): number {
+    if (char === '$') return 0x24; // '$' peso/dólar explícito
     const map: { [key: string]: number } = {
       'á': 0xA0, 'é': 0x82, 'í': 0xA1, 'ó': 0xA2, 'ú': 0xA3,
       'Á': 0xB5, 'É': 0x90, 'Í': 0xD6, 'Ó': 0xE0, 'Ú': 0xE9,
@@ -152,20 +151,48 @@ export class EscPosBuilder {
     return this;
   }
 
-  // Fila de 3 columnas (Cant, Descripción, Total) estilo Aronium Lite
+  // Fila de 3 columnas (Cant, Descripción, Total) con corte y separación garantizada antes del $
   tableRow(cant: string | number, desc: string, total: string): this {
-    const width = this.charsPerLine;
-    const cStr = String(cant).trim().padEnd(4, ' ');
-    const tStr = String(total).trim();
-    const descAvail = width - (cStr.length + tStr.length + 1);
+    const width = this.charsPerLine; // 32 o 48
+    const cantWidth = 3;
+    const cStr = String(cant).trim().padEnd(cantWidth, ' '); // ej: '1  '
 
-    if (desc.trim().length <= descAvail) {
-      const dStr = desc.trim().padEnd(descAvail, ' ');
-      this.line(cStr + dStr + ' ' + tStr);
-    } else {
-      this.line(cStr + desc.trim());
-      const spaces = width - tStr.length;
-      this.line(' '.repeat(Math.max(0, spaces)) + tStr);
+    // Formatear precio asegurando espacio después del '$'
+    let pStr = String(total).trim();
+    if (!pStr.startsWith('$')) {
+      pStr = '$ ' + pStr;
+    } else if (!pStr.startsWith('$ ')) {
+      pStr = '$ ' + pStr.substring(1).trim();
+    }
+    const pLen = Math.max(9, pStr.length + 1);
+    const formattedPrice = pStr.padStart(pLen, ' ');
+    const descAvail = width - cantWidth - pLen; // ej: 32 - 3 - 9 = 20 caracteres
+
+    // Dividir descripción por palabras para corte limpio antes del precio
+    const words = desc.trim().split(/\s+/);
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (const w of words) {
+      if (!currentLine) {
+        currentLine = w;
+      } else if ((currentLine + ' ' + w).length <= descAvail) {
+        currentLine += ' ' + w;
+      } else {
+        lines.push(currentLine);
+        currentLine = w;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+    if (lines.length === 0) lines.push('');
+
+    // Primera línea: Cantidad + Descripción + Separación limpia + Precio a la derecha
+    const firstDesc = lines[0].padEnd(descAvail, ' ');
+    this.line(cStr + firstDesc + formattedPrice);
+
+    // Líneas siguientes: Descripción restante indentada bajo la columna de descripción
+    for (let i = 1; i < lines.length; i++) {
+      this.line(' '.repeat(cantWidth) + lines[i]);
     }
     return this;
   }
@@ -304,7 +331,7 @@ function parseNum(val: any, def: number): number {
   return isNaN(n) ? def : n;
 }
 
-// Generador completo de ticket ESC/POS con soporte dinámico para todas las configuraciones del usuario
+// Generador completo de ticket ESC/POS con soporte dinámico y separación garantizada
 export async function buildTicketEscPos(
   data: TicketData,
   settings: TicketSettings
@@ -314,9 +341,6 @@ export async function buildTicketEscPos(
   const builder = new EscPosBuilder(chars);
 
   const titleSz = parseNum(settings.ticketTitleSize, 22);
-  const detailSz = parseNum(settings.ticketDetailSize, 12);
-  const contentSz = parseNum(settings.ticketFontSize, 12);
-  const totalSz = parseNum(settings.ticketTotalSize, 22);
   const isBold = settings.ticketFontWeight !== 'normal';
   const headerAlign = settings.ticketHeaderAlign || 'center';
 
@@ -329,22 +353,19 @@ export async function buildTicketEscPos(
   // 2. Encabezado de la Tienda (Alineación y Tamaños dinámicos del usuario)
   builder.align(headerAlign);
 
-  // Tamaño del Título según la configuración numérica del usuario
   if (titleSz <= 13) {
-    builder.font(titleSz < 11 ? 'B' : 'A').size('normal').bold(isBold);
+    builder.size('normal').bold(isBold);
   } else if (titleSz <= 22) {
-    builder.font('A').size('double_h').bold(isBold);
+    builder.size('double_h').bold(isBold);
   } else {
-    builder.font('A').size(is80 ? 'double_both' : 'double_h').bold(isBold);
+    builder.size(is80 ? 'double_both' : 'double_h').bold(isBold);
   }
 
   const storeName = settings.nombreNegocio || 'MI TIENDITA';
   builder.line(storeName);
 
-  // Datos de la Tienda (Eslogan, Dirección, Teléfono, RFC) con tamaño y negrita configurados
   builder.size('normal');
-  builder.font(detailSz < 12 ? 'B' : 'A');
-  builder.bold(isBold && detailSz >= 14);
+  builder.bold(false);
 
   if (settings.eslogan) {
     builder.line(`"${settings.eslogan}"`);
@@ -359,8 +380,6 @@ export async function buildTicketEscPos(
     builder.line(`RFC: ${settings.rfc}`);
   }
 
-  builder.bold(false);
-  builder.font('A');
   builder.separator('-');
 
   // 3. Indicador si es ticket de prueba
@@ -371,8 +390,6 @@ export async function buildTicketEscPos(
 
   // 4. Metadatos del Ticket (Fecha, Folio, Caja, Cajero, Cliente)
   builder.align('left');
-  builder.font(detailSz < 12 ? 'B' : 'A');
-  builder.bold(isBold && detailSz >= 14);
 
   const dStr = data.date
     ? (typeof data.date === 'string' ? data.date : data.date.toLocaleString('es-MX'))
@@ -387,83 +404,66 @@ export async function buildTicketEscPos(
     builder.line(`PAGO: ${data.paymentMethod}`);
   }
 
-  builder.bold(false);
-  builder.font('A');
   builder.separator('-');
 
   // 5. Encabezado de Productos
-  builder.font(contentSz < 12 ? 'B' : 'A');
-  builder.bold(isBold);
+  builder.bold(true);
   if (is80) {
     builder.line('CANT DESCRIPCION                                 TOTAL');
   } else {
     builder.line('CT  DESCRIPCION            TOTAL');
   }
   builder.bold(false);
-  builder.font('A');
   builder.separator('-');
 
-  // 6. Lista de Artículos (adaptados al tamaño configurado)
-  builder.font(contentSz < 12 ? 'B' : 'A');
+  // 6. Lista de Artículos (con separación limpia y salto de renglón de descripción)
   for (const item of (data.items || [])) {
     const qty = item.cartQty || item.qty || 1;
     const price = item.price || 0;
     const subtotal = item.subtotal !== undefined ? item.subtotal : ((item as any).total !== undefined ? (item as any).total : (qty * price));
-    const totalStr = `$${Number(subtotal).toFixed(2)}`;
+    const totalStr = `$ ${Number(subtotal).toFixed(2)}`;
     const prodName = item.name || item.productName || 'PRODUCTO';
 
     builder.tableRow(qty, prodName, totalStr);
     if (qty > 1) {
-      builder.line(`    (${qty} x $${Number(price).toFixed(2)})`);
+      builder.line(`    (${qty} x $ ${Number(price).toFixed(2)})`);
     }
   }
 
-  builder.font('A');
   builder.separator('=');
 
-  // 7. Totales (según tamaño numérico de Total configurado por el usuario)
+  // 7. Totales (TOTAL en Doble Altura con '$ ' bien separado)
   builder.align('left');
-  if (totalSz <= 13) {
-    builder.font(totalSz < 11 ? 'B' : 'A').size('normal').bold(isBold);
-  } else if (totalSz <= 22) {
-    builder.font('A').size('double_h').bold(isBold);
-  } else {
-    builder.font('A').size(is80 ? 'double_both' : 'double_h').bold(isBold);
-  }
-
-  builder.row('TOTAL:', `$${Number(data.total || 0).toFixed(2)}`);
+  builder.size('double_h').bold(true);
+  builder.row('TOTAL:', `$ ${Number(data.total || 0).toFixed(2)}`);
   builder.size('normal').bold(false);
 
-  builder.font(detailSz < 12 ? 'B' : 'A');
   if (data.paymentMethod === 'EFECTIVO' || data.recibido !== undefined) {
     const rec = data.recibido !== undefined ? Number(data.recibido) : Number(data.total);
     const cam = data.cambio !== undefined ? Number(data.cambio) : Math.max(0, rec - Number(data.total));
-    builder.row('RECIBIDO:', `$${rec.toFixed(2)}`);
-    builder.row('CAMBIO:', `$${cam.toFixed(2)}`);
+    builder.row('RECIBIDO:', `$ ${Number(rec).toFixed(2)}`);
+    builder.row('CAMBIO:', `$ ${Number(cam).toFixed(2)}`);
   } else if (data.paymentMethod === 'MIXTO') {
     builder.align('center').bold(true).line('PAGO MIXTO').bold(false).align('left');
     const efec = Number(data.montoEfectivo || 0);
-    builder.row('EFECTIVO:', `$${efec.toFixed(2)}`);
+    builder.row('EFECTIVO:', `$ ${efec.toFixed(2)}`);
     const secName = data.metodoMixtoSecundario || 'TARJETA:';
-    builder.row(secName.endsWith(':') ? secName : `${secName}:`, `$${Number(data.montoTarjeta || data.montoTransferencia || 0).toFixed(2)}`);
+    builder.row(secName.endsWith(':') ? secName : `${secName}:`, `$ ${Number(data.montoTarjeta || data.montoTransferencia || 0).toFixed(2)}`);
     const recMixto = Number((data as any).recibido || 0);
     const camMixto = Number((data as any).cambio || 0);
     if (recMixto > efec) {
-      builder.row('EFEC. RECIBIDO:', `$${recMixto.toFixed(2)}`);
-      builder.row('CAMBIO:', `$${camMixto.toFixed(2)}`);
+      builder.row('EFEC. RECIBIDO:', `$ ${recMixto.toFixed(2)}`);
+      builder.row('CAMBIO:', `$ ${camMixto.toFixed(2)}`);
     }
   }
 
-  builder.font('A');
   builder.separator('-');
 
   // 8. Mensaje de Despedida Centrado
   builder.align('center');
-  builder.font(detailSz < 12 ? 'B' : 'A');
-  builder.bold(isBold);
+  builder.bold(true);
   builder.line('* GRACIAS POR SU COMPRA *');
   builder.bold(false);
-  builder.font('A');
 
   // 9. Avance y Corte de Papel configurado
   const feedCount = Math.max(1, Math.min(10, parseNum(settings.ticketFeedLines, 3)));
