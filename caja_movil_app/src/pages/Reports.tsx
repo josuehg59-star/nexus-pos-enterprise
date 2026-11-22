@@ -692,10 +692,13 @@ export default function Reports() {
     const logoUrl = settings.logo || localStorage.getItem('ticketLogo') || (settings as any).ticketLogo || '';
 
     const dynFontFamily = settings.ticketFontFamily === 'monospace' ? 'monospace, "Courier New", Courier' : 'Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif';
-    const dynTitleSize = settings.ticketTitleSize === 'sm' ? '13px' : settings.ticketTitleSize === 'lg' ? '19px' : settings.ticketTitleSize === 'xl' ? '22px' : '16px';
-    const dynFontSize = settings.ticketFontSize === 'sm' ? '11px' : settings.ticketFontSize === 'lg' ? '15px' : settings.ticketFontSize === 'xl' ? '17px' : '13px';
-    const dynDetailSize = settings.ticketFontSize === 'sm' ? '10px' : settings.ticketFontSize === 'lg' ? '13px' : settings.ticketFontSize === 'xl' ? '14.5px' : '11.5px';
-    const dynTotalSize = settings.ticketFontSize === 'sm' ? '16px' : settings.ticketFontSize === 'lg' ? '22px' : settings.ticketFontSize === 'xl' ? '26px' : '19px';
+    const dynTitleSize = settings.ticketTitleSize === 'sm' ? '16px' : settings.ticketTitleSize === 'lg' ? '22px' : settings.ticketTitleSize === 'xl' ? '26px' : settings.ticketTitleSize === 'xxl' ? '30px' : '19px';
+    const dynDetailSize = settings.ticketDetailSize === 'sm' ? '11px' : settings.ticketDetailSize === 'lg' ? '14.5px' : settings.ticketDetailSize === 'xl' ? '16px' : settings.ticketDetailSize === 'xxl' ? '18px' : '13px';
+    const dynFontSize = settings.ticketFontSize === 'sm' ? '12px' : settings.ticketFontSize === 'lg' ? '16px' : settings.ticketFontSize === 'xl' ? '18px' : settings.ticketFontSize === 'xxl' ? '21px' : '14px';
+    const dynTotalSize = settings.ticketTotalSize === 'sm' ? '18px' : settings.ticketTotalSize === 'lg' ? '26px' : settings.ticketTotalSize === 'xl' ? '30px' : settings.ticketTotalSize === 'xxl' ? '34px' : '22px';
+    const dynFontWeight = settings.ticketFontWeight === 'black' ? '900' : settings.ticketFontWeight === 'normal' ? '500' : '700';
+    const headerAlign = settings.ticketHeaderAlign === 'left' ? 'left' : 'center';
+    const wordWrapMode = settings.ticketWordWrap === false ? 'normal' : 'break-word';
     const dynShowLogo = settings.ticketShowLogo !== false;
 
     const folioStr = String(ticket.folio || ticket.id || '').replace(/\D/g, '') || '000001';
@@ -750,7 +753,7 @@ export default function Reports() {
             #ticket-reprint {
               font-family: ${dynFontFamily} !important;
               font-size: ${dynFontSize} !important;
-              font-weight: 800 !important;
+              font-weight: ${dynFontWeight} !important;
               width: 100% !important;
               max-width: 100% !important;
               min-width: 100% !important;
@@ -758,34 +761,40 @@ export default function Reports() {
               padding: 1mm 2.5mm 3mm 1.5mm !important;
               box-sizing: border-box !important;
               color: #000000 !important;
-              word-break: break-word !important;
+              word-break: ${wordWrapMode} !important;
+              overflow-wrap: ${wordWrapMode} !important;
+              white-space: normal !important;
               overflow: hidden !important;
             }
-            .text-center { text-align: center; }
+            .header-sec {
+              text-align: ${headerAlign} !important;
+              width: 100% !important;
+              margin: 0 auto 3px auto !important;
+            }
             .logo-img {
-              max-height: 50px;
-              max-width: 120px;
+              max-height: 55px;
+              max-width: 130px;
               display: block;
-              margin: 0 auto 2px auto;
+              margin: ${headerAlign === 'center' ? '0 auto 4px auto' : '0 0 4px 0'};
               object-fit: contain;
               filter: grayscale(100%);
             }
             .store-title {
               font-size: ${dynTitleSize};
               font-weight: 900 !important;
-              line-height: 1.2;
+              line-height: 1.15;
               margin-bottom: 2px;
-              text-align: center;
+              text-align: ${headerAlign};
               text-transform: uppercase;
-              word-break: break-word;
+              word-break: ${wordWrapMode};
             }
             .store-subtitle {
               font-size: ${dynDetailSize};
-              font-weight: 800 !important;
-              line-height: 1.25;
+              font-weight: ${dynFontWeight} !important;
+              line-height: 1.2;
               margin-bottom: 2px;
-              text-align: center;
-              word-break: break-word;
+              text-align: ${headerAlign};
+              word-break: ${wordWrapMode};
             }
             .dashed-sep {
               width: 100%;
@@ -799,7 +808,7 @@ export default function Reports() {
             }
             .meta-info {
               font-size: ${dynDetailSize};
-              font-weight: 800 !important;
+              font-weight: ${dynFontWeight} !important;
               line-height: 1.3;
               margin: 2px 0;
             }
@@ -815,16 +824,16 @@ export default function Reports() {
               border-bottom: 1.5px solid #000000;
               padding: 2px 0;
               font-size: ${dynFontSize};
-              font-weight: 800 !important;
+              font-weight: 900 !important;
             }
             td {
               padding: 2px 0;
               font-size: ${dynFontSize};
-              font-weight: 800 !important;
+              font-weight: ${dynFontWeight} !important;
               vertical-align: top;
             }
             .cant-col { width: 14%; text-align: left; }
-            .desc-col { width: 54%; text-align: left; word-break: break-word; }
+            .desc-col { width: 54%; text-align: left; word-break: ${wordWrapMode}; }
             .tot-col { width: 32%; text-align: right; padding-right: 1.5mm; white-space: nowrap; font-family: monospace; }
             .total-banner {
               display: flex;
@@ -844,7 +853,7 @@ export default function Reports() {
               justify-content: space-between;
               font-size: ${dynDetailSize};
               margin: 1px 0;
-              font-weight: 800 !important;
+              font-weight: ${dynFontWeight} !important;
               width: 100%;
             }
             .row-flex span:last-child {
@@ -853,7 +862,7 @@ export default function Reports() {
             }
             .footer-msg {
               font-size: 11px;
-              font-weight: 800;
+              font-weight: 900;
               text-align: center;
               margin-top: 4px;
             }
@@ -861,8 +870,10 @@ export default function Reports() {
         </head>
         <body>
           <div id="ticket-reprint">
-            ${dynShowLogo && logoUrl ? `<img src="${logoUrl}" class="logo-img" alt="Logo" />` : ''}
-            <p class="store-title">${companyName}</p>
+            <div class="header-sec">
+              ${dynShowLogo && logoUrl ? `<img src="${logoUrl}" class="logo-img" alt="Logo" />` : ''}
+              <p class="store-title">${companyName}</p>
+            </div>
             <div class="store-subtitle">
               ${slogan ? `<p>"${slogan}"</p>` : ''}
               ${address ? `<p>${address}</p>` : ''}

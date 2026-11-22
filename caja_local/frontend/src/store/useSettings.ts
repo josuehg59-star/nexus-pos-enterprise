@@ -30,11 +30,16 @@ interface SettingsState {
   preventNegativeStock: boolean;
   ticketPrinterName: string;
   ticketFontFamily: 'sans-serif' | 'monospace';
-  ticketFontSize: 'sm' | 'md' | 'lg' | 'xl';
-  ticketTitleSize: 'sm' | 'md' | 'lg' | 'xl';
+  ticketFontWeight: 'bold' | 'black' | 'normal';
+  ticketTitleSize: 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+  ticketDetailSize: 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+  ticketFontSize: 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+  ticketTotalSize: 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
   ticketWidth: '58mm' | '80mm';
   ticketCharsPerLine: number;
   ticketFeedLines: number;
+  ticketHeaderAlign: 'center' | 'left';
+  ticketWordWrap: boolean;
   ticketShowLogo: boolean;
   activeUser: UserItem;
   usersList: UserItem[];
@@ -84,11 +89,16 @@ export const useSettings = create<SettingsState>((set) => ({
   preventNegativeStock: localStorage.getItem('nexus_preventNegativeStock') !== 'false',
   ticketPrinterName: localStorage.getItem('nexus_selected_printer') || '',
   ticketFontFamily: ((localStorage.getItem('nexus_ticketFontFamily') as any) || 'monospace'),
-  ticketFontSize: ((localStorage.getItem('nexus_ticketFontSize') as any) || 'md'),
+  ticketFontWeight: ((localStorage.getItem('nexus_ticketFontWeight') as any) || 'black'),
   ticketTitleSize: ((localStorage.getItem('nexus_ticketTitleSize') as any) || 'md'),
+  ticketDetailSize: ((localStorage.getItem('nexus_ticketDetailSize') as any) || 'md'),
+  ticketFontSize: ((localStorage.getItem('nexus_ticketFontSize') as any) || 'md'),
+  ticketTotalSize: ((localStorage.getItem('nexus_ticketTotalSize') as any) || 'md'),
   ticketWidth: ((localStorage.getItem('nexus_ticketWidth') as any) || '58mm'),
   ticketCharsPerLine: parseInt(localStorage.getItem('nexus_ticketCharsPerLine') || '32', 10),
   ticketFeedLines: parseInt(localStorage.getItem('nexus_ticketFeedLines') || '3', 10),
+  ticketHeaderAlign: ((localStorage.getItem('nexus_ticketHeaderAlign') as any) || 'center'),
+  ticketWordWrap: localStorage.getItem('nexus_ticketWordWrap') !== 'false',
   ticketShowLogo: localStorage.getItem('nexus_ticketShowLogo') !== 'false',
   activeUser: savedActiveUser,
   usersList: savedUsers,
@@ -118,11 +128,16 @@ export const useSettings = create<SettingsState>((set) => ({
     if (settings.preventNegativeStock !== undefined) localStorage.setItem('nexus_preventNegativeStock', String(settings.preventNegativeStock));
     if (settings.ticketPrinterName !== undefined) localStorage.setItem('nexus_selected_printer', settings.ticketPrinterName);
     if (settings.ticketFontFamily !== undefined) localStorage.setItem('nexus_ticketFontFamily', settings.ticketFontFamily);
-    if (settings.ticketFontSize !== undefined) localStorage.setItem('nexus_ticketFontSize', settings.ticketFontSize);
+    if (settings.ticketFontWeight !== undefined) localStorage.setItem('nexus_ticketFontWeight', settings.ticketFontWeight);
     if (settings.ticketTitleSize !== undefined) localStorage.setItem('nexus_ticketTitleSize', settings.ticketTitleSize);
+    if (settings.ticketDetailSize !== undefined) localStorage.setItem('nexus_ticketDetailSize', settings.ticketDetailSize);
+    if (settings.ticketFontSize !== undefined) localStorage.setItem('nexus_ticketFontSize', settings.ticketFontSize);
+    if (settings.ticketTotalSize !== undefined) localStorage.setItem('nexus_ticketTotalSize', settings.ticketTotalSize);
     if (settings.ticketWidth !== undefined) localStorage.setItem('nexus_ticketWidth', settings.ticketWidth);
     if (settings.ticketCharsPerLine !== undefined) localStorage.setItem('nexus_ticketCharsPerLine', String(settings.ticketCharsPerLine));
     if (settings.ticketFeedLines !== undefined) localStorage.setItem('nexus_ticketFeedLines', String(settings.ticketFeedLines));
+    if (settings.ticketHeaderAlign !== undefined) localStorage.setItem('nexus_ticketHeaderAlign', settings.ticketHeaderAlign);
+    if (settings.ticketWordWrap !== undefined) localStorage.setItem('nexus_ticketWordWrap', String(settings.ticketWordWrap));
     if (settings.ticketShowLogo !== undefined) localStorage.setItem('nexus_ticketShowLogo', String(settings.ticketShowLogo));
     if (settings.activeUser !== undefined) localStorage.setItem('nexus_activeUser', JSON.stringify(settings.activeUser));
     if (settings.usersList !== undefined) localStorage.setItem('nexus_usersList', JSON.stringify(settings.usersList));

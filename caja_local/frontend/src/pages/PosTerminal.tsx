@@ -96,7 +96,7 @@ function formatTicketDate(dStr: any) {
 
 export default function PosTerminal() {
   const { isOnline } = useLiveSyncStore();
-  const { nombreNegocio, rfc, eslogan, telefono, direccion, mercadoPagoToken, mercadoPagoDeviceId, servidorIp, clipApiKey, clipSecretKey, clipSerialNumber, clipModo, logo, cajaNombre, activeUser, usersList, requirePasswordLogin, ticketFontFamily, ticketFontSize, ticketTitleSize, ticketWidth, ticketCharsPerLine, ticketFeedLines, ticketShowLogo, ticketPrinterName, setSettings } = useSettings();
+  const { nombreNegocio, rfc, eslogan, telefono, direccion, mercadoPagoToken, mercadoPagoDeviceId, servidorIp, clipApiKey, clipSecretKey, clipSerialNumber, clipModo, logo, cajaNombre, activeUser, usersList, requirePasswordLogin, ticketFontFamily, ticketFontSize, ticketTitleSize, ticketDetailSize, ticketTotalSize, ticketFontWeight, ticketHeaderAlign, ticketWordWrap, ticketWidth, ticketCharsPerLine, ticketFeedLines, ticketShowLogo, ticketPrinterName, setSettings } = useSettings();
   const searchInputRef = useRef<HTMLInputElement>(null);
   
   const { cart, total, addToCart, removeFromCart, updateQuantity, processSale, clearCart, restoreCart } = usePosStore();
@@ -744,10 +744,13 @@ export default function PosTerminal() {
   
   
   const dynFontFamily = ticketFontFamily === 'monospace' ? 'monospace, "Courier New", Courier' : 'Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif';
-  const dynTitleSize = ticketTitleSize === 'sm' ? '13px' : ticketTitleSize === 'lg' ? '19px' : ticketTitleSize === 'xl' ? '22px' : '16px';
-  const dynFontSize = ticketFontSize === 'sm' ? '11px' : ticketFontSize === 'lg' ? '15px' : ticketFontSize === 'xl' ? '17px' : '13px';
-  const dynDetailSize = ticketFontSize === 'sm' ? '10px' : ticketFontSize === 'lg' ? '13px' : ticketFontSize === 'xl' ? '14.5px' : '11.5px';
-  const dynTotalSize = ticketFontSize === 'sm' ? '16px' : ticketFontSize === 'lg' ? '22px' : ticketFontSize === 'xl' ? '26px' : '19px';
+  const dynTitleSize = ticketTitleSize === 'sm' ? '16px' : ticketTitleSize === 'lg' ? '22px' : ticketTitleSize === 'xl' ? '26px' : ticketTitleSize === 'xxl' ? '30px' : '19px';
+  const dynDetailSize = ticketDetailSize === 'sm' ? '11px' : ticketDetailSize === 'lg' ? '14.5px' : ticketDetailSize === 'xl' ? '16px' : ticketDetailSize === 'xxl' ? '18px' : '13px';
+  const dynFontSize = ticketFontSize === 'sm' ? '12px' : ticketFontSize === 'lg' ? '16px' : ticketFontSize === 'xl' ? '18px' : ticketFontSize === 'xxl' ? '21px' : '14px';
+  const dynTotalSize = ticketTotalSize === 'sm' ? '18px' : ticketTotalSize === 'lg' ? '26px' : ticketTotalSize === 'xl' ? '30px' : ticketTotalSize === 'xxl' ? '34px' : '22px';
+  const dynFontWeight = ticketFontWeight === 'black' ? '900' : ticketFontWeight === 'normal' ? '500' : '700';
+  const headerAlign = ticketHeaderAlign === 'left' ? 'left' : 'center';
+  const wordWrapMode = ticketWordWrap === false ? 'normal' : 'break-word';
 
   const printTicket = () => {
     try {
@@ -807,11 +810,43 @@ export default function PosTerminal() {
             font-size: ${dynFontSize} !important;
             line-height: 1.25 !important;
             color: #000000 !important;
-            font-weight: 800 !important;
+            font-weight: ${dynFontWeight} !important;
             border: none !important;
             box-shadow: none !important;
             overflow: hidden !important;
-            word-break: break-word !important;
+            word-break: ${wordWrapMode} !important;
+            overflow-wrap: ${wordWrapMode} !important;
+            white-space: normal !important;
+          }
+          .ticket-header {
+            text-align: ${headerAlign} !important;
+            width: 100% !important;
+            margin: 0 auto 3px auto !important;
+          }
+          .ticket-logo {
+            max-height: 55px !important;
+            max-width: 130px !important;
+            display: block !important;
+            margin: ${headerAlign === 'center' ? '0 auto 4px auto' : '0 0 4px 0'} !important;
+            object-fit: contain !important;
+            filter: grayscale(100%) !important;
+          }
+          .ticket-title {
+            font-size: ${dynTitleSize} !important;
+            font-weight: 900 !important;
+            text-align: ${headerAlign} !important;
+            line-height: 1.15 !important;
+            margin: 0 0 2px 0 !important;
+            text-transform: uppercase !important;
+            word-break: ${wordWrapMode} !important;
+          }
+          .ticket-details {
+            font-size: ${dynDetailSize} !important;
+            font-weight: ${dynFontWeight} !important;
+            text-align: ${headerAlign} !important;
+            line-height: 1.2 !important;
+            margin: 0 !important;
+            word-break: ${wordWrapMode} !important;
           }
           #ticket-print table {
             width: 100% !important;
@@ -822,12 +857,18 @@ export default function PosTerminal() {
           }
           #ticket-print th, #ticket-print td {
             font-size: ${dynFontSize} !important;
-            font-weight: 800 !important;
+            font-weight: ${dynFontWeight} !important;
             padding: 2px 0 !important;
             color: #000000 !important;
+            line-height: 1.2 !important;
           }
           #ticket-print th {
             border-bottom: 1.5px solid #000000 !important;
+            font-weight: 900 !important;
+          }
+          .ticket-total-row {
+            font-size: ${dynTotalSize} !important;
+            font-weight: 900 !important;
           }
         </style>
       `;
@@ -1618,51 +1659,67 @@ export default function PosTerminal() {
                 style={{ 
                   fontFamily: dynFontFamily,
                   color: "#000000", 
-                  fontWeight: "800",
-                  wordBreak: "break-word"
+                  fontWeight: dynFontWeight,
+                  wordBreak: wordWrapMode,
+                  overflowWrap: wordWrapMode,
+                  whiteSpace: "normal"
                 }}
               >
-                <div className="text-center mb-1">
-                  {ticketShowLogo !== false && logo && <img src={logo} alt="Logo" className="max-h-[50px] max-w-[120px] mx-auto mb-1 object-contain grayscale" />}
-                  <p className="font-black leading-tight text-black uppercase" style={{ fontSize: dynTitleSize, wordBreak: "break-word" }}>{nombreNegocio}</p>
+                <div className="ticket-header" style={{ textAlign: headerAlign, width: "100%", margin: "0 auto 3px auto" }}>
+                  {ticketShowLogo !== false && logo && (
+                    <img 
+                      src={logo} 
+                      alt="Logo" 
+                      className="ticket-logo" 
+                      style={{ 
+                        maxHeight: "55px", 
+                        maxWidth: "130px", 
+                        display: "block", 
+                        margin: headerAlign === "center" ? "0 auto 4px auto" : "0 0 4px 0", 
+                        objectFit: "contain", 
+                        filter: "grayscale(100%)" 
+                      }} 
+                    />
+                  )}
+                  <p className="ticket-title" style={{ fontSize: dynTitleSize, fontWeight: "900", textAlign: headerAlign, wordBreak: wordWrapMode, textTransform: "uppercase", lineHeight: 1.15, margin: "0 0 2px 0" }}>{nombreNegocio}</p>
                 </div>
-                <div className="text-center font-black leading-tight my-0.5" style={{ fontSize: dynDetailSize, wordBreak: "break-word" }}>
-                  {eslogan && <p className="italic font-bold">"{eslogan}"</p>}
-                  <p className="mt-0.5 font-black">{direccion}</p>
-                  {telefono && <p className="font-black">TEL: {telefono}</p>}
-                  {rfc && <p className="font-black mt-0.5">RFC: {rfc}</p>}
+                <div className="ticket-details" style={{ fontSize: dynDetailSize, fontWeight: dynFontWeight, textAlign: headerAlign, wordBreak: wordWrapMode, lineHeight: 1.2 }}>
+                  {eslogan && <p style={{ fontStyle: "italic", fontWeight: "700" }}>"{eslogan}"</p>}
+                  <p style={{ marginTop: "2px", fontWeight: dynFontWeight }}>{direccion}</p>
+                  {telefono && <p style={{ fontWeight: dynFontWeight }}>TEL: {telefono}</p>}
+                  {rfc && <p style={{ marginTop: "2px", fontWeight: dynFontWeight }}>RFC: {rfc}</p>}
                 </div>
 
                 <div className="w-full my-1 border-t border-dashed border-black"></div>
 
-                <div className="font-black text-black leading-tight space-y-0.5 my-1" style={{ fontSize: dynDetailSize }}>
-                  <p className="font-black">FECHA: {formatTicketDate(lastTicket.date)}</p>
-                  <p className="font-black">FOLIO: #{lastTicket.folio}</p>
-                  <p className="font-black">CAJA: {(lastTicket.caja || cajaNombre || 'CAJA 1 - PRINCIPAL').toUpperCase()}</p>
-                  <p className="font-black">CAJERO: {(lastTicket.cajero || activeUser?.name || 'ADMINISTRADOR').toUpperCase()}</p>
-                  <p className="font-black">CLIENTE: {(lastTicket.clientName || 'PUBLICO GENERAL').toUpperCase()}</p>
-                  <p className="font-black">MÉTODO PAGO: {lastTicket.paymentMethod}</p>
+                <div className="leading-tight space-y-0.5 my-1" style={{ fontSize: dynDetailSize, fontWeight: dynFontWeight }}>
+                  <p>FECHA: {formatTicketDate(lastTicket.date)}</p>
+                  <p>FOLIO: #{lastTicket.folio}</p>
+                  <p>CAJA: {(lastTicket.caja || cajaNombre || 'CAJA 1 - PRINCIPAL').toUpperCase()}</p>
+                  <p>CAJERO: {(lastTicket.cajero || activeUser?.name || 'ADMINISTRADOR').toUpperCase()}</p>
+                  <p>CLIENTE: {(lastTicket.clientName || 'PUBLICO GENERAL').toUpperCase()}</p>
+                  <p>MÉTODO PAGO: {lastTicket.paymentMethod}</p>
                 </div>
 
                 <div className="w-full my-1 border-t border-dashed border-black"></div>
 
-                <table className="w-full border-collapse my-1 font-black" style={{ fontSize: dynFontSize, tableLayout: "fixed" }}>
+                <table className="w-full border-collapse my-1" style={{ fontSize: dynFontSize, tableLayout: "fixed" }}>
                   <thead>
                     <tr style={{ borderBottom: "1.5px solid #000" }}>
-                      <th style={{ width: "14%", textAlign: "left", padding: "2px 0" }}>CT</th>
-                      <th style={{ width: "54%", textAlign: "left", padding: "2px 0" }}>DESCRIPCIÓN</th>
-                      <th style={{ width: "32%", textAlign: "right", padding: "2px 1.5mm 2px 0", whiteSpace: "nowrap" }}>TOTAL</th>
+                      <th style={{ width: "14%", textAlign: "left", padding: "2px 0", fontWeight: "900" }}>CT</th>
+                      <th style={{ width: "54%", textAlign: "left", padding: "2px 0", fontWeight: "900" }}>DESCRIPCIÓN</th>
+                      <th style={{ width: "32%", textAlign: "right", padding: "2px 1.5mm 2px 0", whiteSpace: "nowrap", fontWeight: "900" }}>TOTAL</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/30">
                     {(lastTicket.items || lastTicket.cart || []).map((item: any) => (
                       <tr key={item.id} style={{ verticalAlign: "top" }}>
-                        <td style={{ width: "14%", textAlign: "left", padding: "2px 0" }}>{item.cartQty}</td>
-                        <td style={{ width: "54%", textAlign: "left", padding: "2px 0", wordBreak: "break-word" }}>
+                        <td style={{ width: "14%", textAlign: "left", padding: "2px 0", fontWeight: dynFontWeight }}>{item.cartQty}</td>
+                        <td style={{ width: "54%", textAlign: "left", padding: "2px 0", wordBreak: wordWrapMode, fontWeight: dynFontWeight }}>
                           {item.name}
-                          {item.cartQty > 1 && <span style={{ display: "block", fontSize: "9px", fontWeight: "700" }}>({item.cartQty} x ${item.price?.toFixed(2)})</span>}
+                          {item.cartQty > 1 && <span style={{ display: "block", fontSize: "10px", fontWeight: "700" }}>({item.cartQty} x ${item.price?.toFixed(2)})</span>}
                         </td>
-                        <td style={{ width: "32%", textAlign: "right", padding: "2px 1.5mm 2px 0", fontFamily: "monospace", whiteSpace: "nowrap" }}>${lineTotal(item).toFixed(2)}</td>
+                        <td style={{ width: "32%", textAlign: "right", padding: "2px 1.5mm 2px 0", fontFamily: "monospace", whiteSpace: "nowrap", fontWeight: dynFontWeight }}>${lineTotal(item).toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1670,20 +1727,20 @@ export default function PosTerminal() {
 
                 <div className="w-full my-1 border-t-2 border-solid border-black"></div>
 
-                <div className="flex justify-between items-center font-black my-1 w-full" style={{ fontSize: dynTotalSize }}>
+                <div className="flex justify-between items-center my-1 w-full ticket-total-row" style={{ fontSize: dynTotalSize, fontWeight: "900" }}>
                   <span>TOTAL:</span>
-                  <span className="font-mono font-black" style={{ fontSize: dynTotalSize, paddingRight: "1.5mm" }}>${(lastTicket.total || 0).toFixed(2)}</span>
+                  <span className="font-mono" style={{ fontSize: dynTotalSize, fontWeight: "900", paddingRight: "1.5mm" }}>${(lastTicket.total || 0).toFixed(2)}</span>
                 </div>
 
                 {lastTicket.paymentMethod === 'EFECTIVO' && (
-                  <div className="font-black leading-tight my-1 space-y-0.5 w-full" style={{ fontSize: dynDetailSize }}>
+                  <div className="leading-tight my-1 space-y-0.5 w-full" style={{ fontSize: dynDetailSize, fontWeight: dynFontWeight }}>
                     <div className="flex justify-between"><span>RECIBIDO:</span><span className="font-mono" style={{ paddingRight: "1.5mm" }}>${(lastTicket.recibido || lastTicket.total || 0).toFixed(2)}</span></div>
                     <div className="flex justify-between"><span>CAMBIO:</span><span className="font-mono" style={{ paddingRight: "1.5mm" }}>${Math.max(0, (lastTicket.recibido || 0) - (lastTicket.total || 0)).toFixed(2)}</span></div>
                   </div>
                 )}
                 {lastTicket.paymentMethod === 'MIXTO' && (
-                  <div className="font-black leading-tight my-1 space-y-0.5 w-full" style={{ fontSize: dynDetailSize }}>
-                    <p className="text-center">FORMA DE PAGO: MIXTO</p>
+                  <div className="leading-tight my-1 space-y-0.5 w-full" style={{ fontSize: dynDetailSize, fontWeight: dynFontWeight }}>
+                    <p className="text-center" style={{ fontWeight: "900" }}>FORMA DE PAGO: MIXTO</p>
                     <p>• EN EFECTIVO: ${(lastTicket.montoEfectivo || 0).toFixed(2)}</p>
                     <p>• {lastTicket.metodoMixtoSecundario || 'TARJETA'}: ${(lastTicket.montoTarjeta || lastTicket.montoTransferencia || ((lastTicket.total || 0) - (lastTicket.montoEfectivo || 0))).toFixed(2)}</p>
                     {lastTicket.recibido && lastTicket.recibido > (lastTicket.montoEfectivo || 0) && (
