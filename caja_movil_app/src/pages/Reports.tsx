@@ -691,11 +691,18 @@ export default function Reports() {
     const rfcVal = settings.rfc || '';
     const logoUrl = settings.logo || localStorage.getItem('ticketLogo') || (settings as any).ticketLogo || '';
 
+    const dynFontFamily = settings.ticketFontFamily === 'monospace' ? 'monospace, "Courier New", Courier' : 'Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif';
+    const dynTitleSize = settings.ticketTitleSize === 'sm' ? '13px' : settings.ticketTitleSize === 'lg' ? '19px' : settings.ticketTitleSize === 'xl' ? '22px' : '16px';
+    const dynFontSize = settings.ticketFontSize === 'sm' ? '11px' : settings.ticketFontSize === 'lg' ? '15px' : settings.ticketFontSize === 'xl' ? '17px' : '13px';
+    const dynDetailSize = settings.ticketFontSize === 'sm' ? '10px' : settings.ticketFontSize === 'lg' ? '13px' : settings.ticketFontSize === 'xl' ? '14.5px' : '11.5px';
+    const dynTotalSize = settings.ticketFontSize === 'sm' ? '16px' : settings.ticketFontSize === 'lg' ? '22px' : settings.ticketFontSize === 'xl' ? '26px' : '19px';
+    const dynShowLogo = settings.ticketShowLogo !== false;
+
     const folioStr = String(ticket.folio || ticket.id || '').replace(/\D/g, '') || '000001';
     const dateObj = new Date(ticket.date);
     const dateStr = isNaN(dateObj.getTime()) ? String(ticket.date) : dateObj.toLocaleString('es-MX');
 
-    const items = ticket.items || [];
+    const items = ticket.items || ticket.cart || [];
     const itemRows = items.map((i: any) => {
       const qty = i.cartQty || i.qty || 1;
       const price = i.price || 0;
@@ -703,12 +710,12 @@ export default function Reports() {
       const nameStr = (i.name || i.productName || 'PRODUCTO').toUpperCase();
       return `
         <tr style="vertical-align:top;">
-          <td style="width:12%; text-align:center; padding:1px 0; font-weight:900 !important; color:#000 !important;">${qty}</td>
-          <td style="width:58%; text-align:left; padding:1px 0; word-break:break-word; font-weight:900 !important; color:#000 !important;">
+          <td style="width:14%; text-align:left; padding:2px 0; font-weight:800 !important; color:#000 !important;">${qty}</td>
+          <td style="width:54%; text-align:left; padding:2px 0; word-break:break-word; font-weight:800 !important; color:#000 !important;">
             ${nameStr}
-            ${qty > 1 ? `<br/><span style="font-size:8px; font-weight:normal; color:#000;">(${qty} x $${price.toFixed(2)})</span>` : ''}
+            ${qty > 1 ? `<br/><span style="font-size:9px; font-weight:700; color:#000;">(${qty} x $${price.toFixed(2)})</span>` : ''}
           </td>
-          <td style="width:30%; text-align:right; padding:1px 0; font-weight:900 !important; color:#000 !important;">$${totalLine.toFixed(2)}</td>
+          <td style="width:32%; text-align:right; padding:2px 1.5mm 2px 0; font-weight:800 !important; font-family:monospace; color:#000 !important;">$${totalLine.toFixed(2)}</td>
         </tr>
       `;
     }).join('');
@@ -724,73 +731,186 @@ export default function Reports() {
         <head>
           <title>Ticket Reimpresion #${folioStr}</title>
           <style>
-            @page { size: 58mm auto; margin: 0; }
-            body {
-              font-family: Arial, sans-serif;
-              font-size: 9px;
-              font-weight: 900 !important;
-              width: 44mm !important;
-              max-width: 44mm !important;
-              margin: 0 auto !important;
-              padding: 1mm 0 !important;
+            @page { margin: 0; size: auto; }
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
               color: #000000 !important;
-              background-color: #ffffff !important;
-              word-break: break-word;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
+              font-family: ${dynFontFamily} !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
-            * { font-weight: 900 !important; color: #000000 !important; box-sizing: border-box; }
-            b, th, td, p, h2, h3, div { font-weight: 900 !important; color: #000000 !important; }
-            img {
-              max-height: 50px !important;
-              max-width: 140px !important;
+            body, html {
+              margin: 0 !important;
+              padding: 0 !important;
+              width: 100% !important;
+              background: #ffffff !important;
+            }
+            #ticket-reprint {
+              font-family: ${dynFontFamily} !important;
+              font-size: ${dynFontSize} !important;
+              font-weight: 800 !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              min-width: 100% !important;
+              margin: 0 !important;
+              padding: 1mm 2.5mm 3mm 1.5mm !important;
+              box-sizing: border-box !important;
+              color: #000000 !important;
+              word-break: break-word !important;
+              overflow: hidden !important;
+            }
+            .text-center { text-align: center; }
+            .logo-img {
+              max-height: 50px;
+              max-width: 120px;
               display: block;
-              margin: 0 auto 4px auto;
+              margin: 0 auto 2px auto;
               object-fit: contain;
-              
+              filter: grayscale(100%);
             }
-            h2, h3, p { margin: 2px 0; text-align: center; text-transform: uppercase; font-weight: 900 !important; }
-            table { width: 100% !important; border-collapse: collapse; margin: 3px 0; table-layout: fixed; }
-            th { border-bottom: 2px solid #000000 !important; text-align: left; padding: 1px 0; font-weight: 900 !important; font-size: 9px !important; }
-            td { font-weight: 900 !important; font-size: 9px !important; }
-            .divider { border-top: 1.5px dashed #000000 !important; margin: 4px 0; }
-            .row { display: flex; justify-content: space-between; font-size: 10px; margin: 2px 0; font-weight: 900 !important; }
+            .store-title {
+              font-size: ${dynTitleSize};
+              font-weight: 900 !important;
+              line-height: 1.2;
+              margin-bottom: 2px;
+              text-align: center;
+              text-transform: uppercase;
+              word-break: break-word;
+            }
+            .store-subtitle {
+              font-size: ${dynDetailSize};
+              font-weight: 800 !important;
+              line-height: 1.25;
+              margin-bottom: 2px;
+              text-align: center;
+              word-break: break-word;
+            }
+            .dashed-sep {
+              width: 100%;
+              border-top: 1.5px dashed #000000;
+              margin: 3px 0;
+            }
+            .solid-sep {
+              width: 100%;
+              border-top: 1.5px solid #000000;
+              margin: 3px 0;
+            }
+            .meta-info {
+              font-size: ${dynDetailSize};
+              font-weight: 800 !important;
+              line-height: 1.3;
+              margin: 2px 0;
+            }
+            table {
+              width: 100% !important;
+              max-width: 100% !important;
+              border-collapse: collapse;
+              margin: 2px 0;
+              table-layout: fixed;
+              font-size: ${dynFontSize};
+            }
+            th {
+              border-bottom: 1.5px solid #000000;
+              padding: 2px 0;
+              font-size: ${dynFontSize};
+              font-weight: 800 !important;
+            }
+            td {
+              padding: 2px 0;
+              font-size: ${dynFontSize};
+              font-weight: 800 !important;
+              vertical-align: top;
+            }
+            .cant-col { width: 14%; text-align: left; }
+            .desc-col { width: 54%; text-align: left; word-break: break-word; }
+            .tot-col { width: 32%; text-align: right; padding-right: 1.5mm; white-space: nowrap; font-family: monospace; }
+            .total-banner {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              font-size: ${dynTotalSize};
+              font-weight: 900 !important;
+              margin: 3px 0;
+              width: 100%;
+            }
+            .total-banner span:last-child {
+              padding-right: 1.5mm;
+              font-family: monospace;
+            }
+            .row-flex {
+              display: flex;
+              justify-content: space-between;
+              font-size: ${dynDetailSize};
+              margin: 1px 0;
+              font-weight: 800 !important;
+              width: 100%;
+            }
+            .row-flex span:last-child {
+              padding-right: 1.5mm;
+              font-family: monospace;
+            }
+            .footer-msg {
+              font-size: 11px;
+              font-weight: 800;
+              text-align: center;
+              margin-top: 4px;
+            }
           </style>
         </head>
         <body>
-          ${logoUrl ? `<img src="${logoUrl}" alt="Logo" />` : ''}
-          <h2><b>${companyName.toUpperCase()}</b></h2>
-          ${slogan ? `<p><b>"${slogan.toUpperCase()}"</b></p>` : ''}
-          ${address ? `<p><b>${address.toUpperCase()}</b></p>` : ''}
-          ${phone ? `<p><b>TEL: ${phone}</b></p>` : ''}
-          ${rfcVal ? `<p><b>RFC: ${rfcVal.toUpperCase()}</b></p>` : ''}
-          <div class="divider"></div>
-          <p style="text-align:center; font-weight:900;"><b>*** REIMPRESIÓN TICKET ***</b></p>
-          <p style="text-align:left;"><b>FECHA: ${dateStr}</b></p>
-          <p style="text-align:left;"><b>FOLIO: #${folioStr}</b></p>
-          <p style="text-align:left;"><b>CLIENTE: ${(ticket.clientName || ticket.client || 'PUBLICO GENERAL').toUpperCase()}</b></p>
-          <p style="text-align:left;"><b>MÉTODO PAGO: ${(ticket.paymentMethod || 'EFECTIVO').toUpperCase()}</b></p>
-          <div class="divider"></div>
-          <table>
-            <thead>
-              <tr>
-                <th style="width:12%; text-align:center;"><b>CT</b></th>
-                <th style="width:58%; text-align:left;"><b>DESCRIPCIÓN</b></th>
-                <th style="width:30%; text-align:right;"><b>TOTAL</b></th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemRows}
-            </tbody>
-          </table>
-          <div class="divider"></div>
-          <div class="row"><span><b>TOTAL:</b></span><span><b>$${(ticket.total || 0).toFixed(2)}</b></span></div>
-          ${(ticket.paymentMethod || 'EFECTIVO').toUpperCase() === 'EFECTIVO' ? `
-            <div class="row"><span><b>RECIBIDO:</b></span><span><b>$${recibido.toFixed(2)}</b></span></div>
-            <div class="row"><span><b>CAMBIO:</b></span><span><b>$${cambio.toFixed(2)}</b></span></div>
-          ` : ''}
-          <div class="divider"></div>
-          <p style="text-align:center; margin-top:6px"><b>* GRACIAS POR SU COMPRA *</b></p>
+          <div id="ticket-reprint">
+            ${dynShowLogo && logoUrl ? `<img src="${logoUrl}" class="logo-img" alt="Logo" />` : ''}
+            <p class="store-title">${companyName}</p>
+            <div class="store-subtitle">
+              ${slogan ? `<p>"${slogan}"</p>` : ''}
+              ${address ? `<p>${address}</p>` : ''}
+              ${phone ? `<p>TEL: ${phone}</p>` : ''}
+              ${rfcVal ? `<p>RFC: ${rfcVal}</p>` : ''}
+            </div>
+            <div class="dashed-sep"></div>
+            <p class="text-center store-subtitle" style="letter-spacing:1px; font-size:10px;">*** REIMPRESIÓN TICKET ***</p>
+            <div class="meta-info">
+              <p>FECHA: ${dateStr}</p>
+              <p>FOLIO: #${folioStr}</p>
+              <p>CAJA: ${(ticket.caja || settings.cajaNombre || 'CAJA 1 - PRINCIPAL').toUpperCase()}</p>
+              <p>CAJERO: ${(ticket.cajero || settings.activeUser?.name || 'ADMINISTRADOR').toUpperCase()}</p>
+              <p>CLIENTE: ${(ticket.clientName || ticket.client || 'PUBLICO GENERAL').toUpperCase()}</p>
+              <p>MÉTODO PAGO: ${(ticket.paymentMethod || 'EFECTIVO').toUpperCase()}</p>
+            </div>
+            <div class="dashed-sep"></div>
+            <table>
+              <thead>
+                <tr>
+                  <th class="cant-col">CT</th>
+                  <th class="desc-col">DESCRIPCIÓN</th>
+                  <th class="tot-col">TOTAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemRows}
+              </tbody>
+            </table>
+            <div class="solid-sep"></div>
+            <div class="total-banner">
+              <span>TOTAL:</span>
+              <span>$${(ticket.total || 0).toFixed(2)}</span>
+            </div>
+            ${(ticket.paymentMethod || 'EFECTIVO').toUpperCase() === 'EFECTIVO' ? `
+              <div class="row-flex">
+                <span>RECIBIDO:</span>
+                <span>$${recibido.toFixed(2)}</span>
+              </div>
+              <div class="row-flex">
+                <span>CAMBIO:</span>
+                <span>$${cambio.toFixed(2)}</span>
+              </div>
+            ` : ''}
+            <div class="dashed-sep"></div>
+            <p class="footer-msg">* GRACIAS POR SU COMPRA *</p>
+            <div style="height: ${(settings.ticketFeedLines || 3) * 14}px;"></div>
+          </div>
           <script>
             window.onload = function() { window.print(); };
           </script>

@@ -14,13 +14,15 @@ export default function Config() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const manualBackupRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const { nombreNegocio, rfc, eslogan, telefono, email, direccion, logo: storeLogo, cajaNombre, rolCaja, servidorIp, requirePasswordLogin, usersList, activeUser, mercadoPagoToken, mercadoPagoDeviceId, terminalBancariaModo, clipApiKey, clipSecretKey, clipSerialNumber, clipModo, bancoDefault, ticketPrinterName, ticketFontFamily, ticketFontSize, ticketTitleSize, ticketWidth, ticketShowLogo, setSettings } = useSettings();
+  const { nombreNegocio, rfc, eslogan, telefono, email, direccion, logo: storeLogo, cajaNombre, rolCaja, servidorIp, requirePasswordLogin, usersList, activeUser, mercadoPagoToken, mercadoPagoDeviceId, terminalBancariaModo, clipApiKey, clipSecretKey, clipSerialNumber, clipModo, bancoDefault, ticketPrinterName, ticketFontFamily, ticketFontSize, ticketTitleSize, ticketWidth, ticketCharsPerLine, ticketFeedLines, ticketShowLogo, setSettings } = useSettings();
   const [localSettings, setLocalSettings] = useState({ nombreNegocio, rfc, eslogan, telefono, email, direccion, logo: storeLogo, cajaNombre, rolCaja, servidorIp, requirePasswordLogin, usersList, activeUser, mercadoPagoToken, mercadoPagoDeviceId, terminalBancariaModo, clipApiKey: clipApiKey || '', clipSecretKey: clipSecretKey || '', clipSerialNumber: clipSerialNumber || '', clipModo: clipModo || 'MANUAL', bancoDefault: bancoDefault || 'BBVA / BANCOMER',
     ticketPrinterName: ticketPrinterName || '',
-    ticketFontFamily: ticketFontFamily || 'sans-serif',
+    ticketFontFamily: ticketFontFamily || 'monospace',
     ticketFontSize: ticketFontSize || 'md',
     ticketTitleSize: ticketTitleSize || 'md',
     ticketWidth: ticketWidth || '58mm',
+    ticketCharsPerLine: ticketCharsPerLine || 32,
+    ticketFeedLines: ticketFeedLines || 3,
     ticketShowLogo: ticketShowLogo !== false
   });
   const [testConnStatus, setTestConnStatus] = useState<'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR'>('IDLE');
@@ -77,10 +79,10 @@ export default function Config() {
   const handlePrintTestTicket = async () => {
     setTestPrintFeedback('Enviando ticket de prueba...');
     const fontFam = localSettings.ticketFontFamily === 'monospace' ? 'monospace, "Courier New", Courier' : 'Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif';
-    const titleSz = localSettings.ticketTitleSize === 'sm' ? '11px' : localSettings.ticketTitleSize === 'lg' ? '15px' : '13px';
-    const contentSz = localSettings.ticketFontSize === 'sm' ? '9.5px' : localSettings.ticketFontSize === 'lg' ? '12.5px' : '11px';
-    const detailSz = localSettings.ticketFontSize === 'sm' ? '8.5px' : localSettings.ticketFontSize === 'lg' ? '11px' : '9.5px';
-    const printW = localSettings.ticketWidth === '80mm' ? '72mm' : '48mm';
+    const titleSz = localSettings.ticketTitleSize === 'sm' ? '13px' : localSettings.ticketTitleSize === 'lg' ? '19px' : localSettings.ticketTitleSize === 'xl' ? '22px' : '16px';
+    const contentSz = localSettings.ticketFontSize === 'sm' ? '11px' : localSettings.ticketFontSize === 'lg' ? '15px' : localSettings.ticketFontSize === 'xl' ? '17px' : '13px';
+    const detailSz = localSettings.ticketFontSize === 'sm' ? '10px' : localSettings.ticketFontSize === 'lg' ? '13px' : localSettings.ticketFontSize === 'xl' ? '14.5px' : '11.5px';
+    const totalSz = localSettings.ticketFontSize === 'sm' ? '16px' : localSettings.ticketFontSize === 'lg' ? '22px' : localSettings.ticketFontSize === 'xl' ? '26px' : '19px';
 
     const testHtml = `
       <!DOCTYPE html>
@@ -90,17 +92,18 @@ export default function Config() {
           <title>Ticket de Prueba</title>
           <style>
             @page { margin: 0; size: auto; }
-            * { margin: 0; padding: 0; box-sizing: border-box; color: #000000 !important; font-family: ${fontFam} !important; }
-            body, html { width: 100%; margin: 0; padding: 0; background: #fff; }
+            * { margin: 0; padding: 0; box-sizing: border-box; color: #000000 !important; font-family: ${fontFam} !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            body, html { width: 100% !important; margin: 0 !important; padding: 0 !important; background: #fff !important; }
             #test-ticket {
-              width: 100%;
-              max-width: ${printW};
-              margin: 0 auto;
-              padding: 1mm 2mm 3mm 2mm;
-              box-sizing: border-box;
-              font-size: ${contentSz};
-              font-weight: 800;
-              word-break: break-word;
+              width: 100% !important;
+              max-width: 100% !important;
+              min-width: 100% !important;
+              margin: 0 !important;
+              padding: 1mm 2.5mm 3mm 1.5mm !important;
+              box-sizing: border-box !important;
+              font-size: ${contentSz} !important;
+              font-weight: 800 !important;
+              word-break: break-word !important;
             }
             .dashed-sep { width: 100%; border-top: 1.5px dashed #000; margin: 3px 0; }
             .solid-sep { width: 100%; border-top: 1.5px solid #000; margin: 3px 0; }
@@ -129,26 +132,26 @@ export default function Config() {
             <table style="width: 100%; border-collapse: collapse; table-layout: fixed; font-size: ${contentSz}; font-weight: 800; margin: 2px 0;">
               <thead>
                 <tr style="border-bottom: 1.5px solid #000;">
-                  <th style="width: 14%; text-align: left; padding: 1.5px 0;">CT</th>
-                  <th style="width: 54%; text-align: left; padding: 1.5px 0;">DESCRIPCIÓN</th>
-                  <th style="width: 32%; text-align: right; padding-right: 1.5mm;">TOTAL</th>
+                  <th style="width: 14%; text-align: left; padding: 2px 0;">CT</th>
+                  <th style="width: 54%; text-align: left; padding: 2px 0;">DESCRIPCIÓN</th>
+                  <th style="width: 32%; text-align: right; padding: 2px 1.5mm 2px 0;">TOTAL</th>
                 </tr>
               </thead>
               <tbody>
                 <tr style="vertical-align: top;">
-                  <td style="width: 14%; text-align: left; padding: 1.5px 0;">1</td>
-                  <td style="width: 54%; text-align: left; padding: 1.5px 0; word-break: break-word;">PRODUCTO DE MUESTRA A</td>
-                  <td style="width: 32%; text-align: right; padding-right: 1.5mm; font-family: monospace;">$50.00</td>
+                  <td style="width: 14%; text-align: left; padding: 2px 0;">1</td>
+                  <td style="width: 54%; text-align: left; padding: 2px 0; word-break: break-word;">PRODUCTO DE MUESTRA A</td>
+                  <td style="width: 32%; text-align: right; padding: 2px 1.5mm 2px 0; font-family: monospace;">$50.00</td>
                 </tr>
                 <tr style="vertical-align: top;">
-                  <td style="width: 14%; text-align: left; padding: 1.5px 0;">2</td>
-                  <td style="width: 54%; text-align: left; padding: 1.5px 0; word-break: break-word;">PRODUCTO DE MUESTRA B<br/><span style="font-size: 8px;">(2 x $25.00)</span></td>
-                  <td style="width: 32%; text-align: right; padding-right: 1.5mm; font-family: monospace;">$50.00</td>
+                  <td style="width: 14%; text-align: left; padding: 2px 0;">2</td>
+                  <td style="width: 54%; text-align: left; padding: 2px 0; word-break: break-word;">PRODUCTO DE MUESTRA B<br/><span style="font-size: 9px;">(2 x $25.00)</span></td>
+                  <td style="width: 32%; text-align: right; padding: 2px 1.5mm 2px 0; font-family: monospace;">$50.00</td>
                 </tr>
               </tbody>
             </table>
             <div class="solid-sep"></div>
-            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 900; margin: 3px 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: ${totalSz}; font-weight: 900; margin: 3px 0;">
               <span>TOTAL:</span>
               <span style="padding-right: 1.5mm; font-family: monospace;">$100.00</span>
             </div>
@@ -159,7 +162,8 @@ export default function Config() {
               <span>CAMBIO:</span><span style="padding-right: 1.5mm; font-family: monospace;">$0.00</span>
             </div>
             <div class="dashed-sep"></div>
-            <p style="text-align: center; font-size: 10px; font-weight: 800; margin-top: 4px;">* GRACIAS POR SU COMPRA *</p>
+            <p style="text-align: center; font-size: 11px; font-weight: 800; margin-top: 4px;">* GRACIAS POR SU COMPRA *</p>
+            <div style="height: ${(localSettings.ticketFeedLines || 3) * 14}px;"></div>
           </div>
         </body>
       </html>
@@ -229,12 +233,16 @@ export default function Config() {
       ticketFontSize: localSettings.ticketFontSize,
       ticketTitleSize: localSettings.ticketTitleSize,
       ticketWidth: localSettings.ticketWidth,
+      ticketCharsPerLine: Number(localSettings.ticketCharsPerLine) || 32,
+      ticketFeedLines: Number(localSettings.ticketFeedLines) || 3,
       ticketShowLogo: localSettings.ticketShowLogo
     });
     alert(`✅ Configuración de Impresora y Ticket Guardada Exitosamente:
 
 • Impresora: ${localSettings.ticketPrinterName || 'Predeterminada de Windows'}
 • Rollo: ${localSettings.ticketWidth}
+• Caracteres por Línea: ${localSettings.ticketCharsPerLine || 32}
+• Líneas de Avance (Feed): ${localSettings.ticketFeedLines || 3}
 • Tipografía: ${localSettings.ticketFontFamily}
 • Tamaño de Letra: ${localSettings.ticketFontSize}
 • Tamaño Título: ${localSettings.ticketTitleSize}`);
@@ -1213,8 +1221,43 @@ export default function Config() {
                       onChange={e => setLocalSettings({ ...localSettings, ticketFontFamily: e.target.value as any })}
                       className="w-full bg-[#0b1120] border border-nexus-700 text-white px-3 py-2.5 rounded-xl font-bold text-xs focus:border-blue-500 outline-none"
                     >
+                      <option value="monospace">Monospace (Clásica Registradora / Aronium)</option>
                       <option value="sans-serif">Arial / Sans-Serif (Moderna y Clara)</option>
-                      <option value="monospace">Monospace (Clásica Registradora)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* 3.5. COLUMNAS Y ALIMENTACIÓN (ESTILO ARONIUM) */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
+                      📏 CARACTERES POR LÍNEA:
+                    </label>
+                    <select
+                      value={localSettings.ticketCharsPerLine}
+                      onChange={e => setLocalSettings({ ...localSettings, ticketCharsPerLine: Number(e.target.value) })}
+                      className="w-full bg-[#0b1120] border border-nexus-700 text-white px-3 py-2.5 rounded-xl font-bold text-xs focus:border-blue-500 outline-none"
+                    >
+                      <option value={32}>32 Caracteres (Estándar 58mm POS / Aronium)</option>
+                      <option value={40}>40 Caracteres (58mm Compacto)</option>
+                      <option value={48}>48 Caracteres (80mm Rollo Grande)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
+                      ✂️ LÍNEAS DE ALIMENTACIÓN (FEED):
+                    </label>
+                    <select
+                      value={localSettings.ticketFeedLines}
+                      onChange={e => setLocalSettings({ ...localSettings, ticketFeedLines: Number(e.target.value) })}
+                      className="w-full bg-[#0b1120] border border-nexus-700 text-white px-3 py-2.5 rounded-xl font-bold text-xs focus:border-blue-500 outline-none"
+                    >
+                      <option value={1}>1 Línea</option>
+                      <option value={2}>2 Líneas</option>
+                      <option value={3}>3 Líneas (Recomendado para corte limpio)</option>
+                      <option value={4}>4 Líneas</option>
+                      <option value={5}>5 Líneas</option>
                     </select>
                   </div>
                 </div>
@@ -1230,9 +1273,10 @@ export default function Config() {
                       onChange={e => setLocalSettings({ ...localSettings, ticketTitleSize: e.target.value as any })}
                       className="w-full bg-[#0b1120] border border-nexus-700 text-white px-3 py-2.5 rounded-xl font-bold text-xs focus:border-blue-500 outline-none"
                     >
-                      <option value="sm">Chica (11px)</option>
-                      <option value="md">Mediana (13px - Recomendada)</option>
-                      <option value="lg">Grande (15px)</option>
+                      <option value="sm">Chica (13px)</option>
+                      <option value="md">Mediana (16px - Recomendada)</option>
+                      <option value="lg">Grande (19px)</option>
+                      <option value="xl">Extra Grande (22px)</option>
                     </select>
                   </div>
 
@@ -1245,9 +1289,10 @@ export default function Config() {
                       onChange={e => setLocalSettings({ ...localSettings, ticketFontSize: e.target.value as any })}
                       className="w-full bg-[#0b1120] border border-nexus-700 text-white px-3 py-2.5 rounded-xl font-bold text-xs focus:border-blue-500 outline-none"
                     >
-                      <option value="sm">Chica (9.5px - Compacta)</option>
-                      <option value="md">Mediana (11px - Recomendada)</option>
-                      <option value="lg">Grande (12.5px - Extra Legible)</option>
+                      <option value="sm">Chica (11px - Compacta)</option>
+                      <option value="md">Mediana (13px - Recomendada)</option>
+                      <option value="lg">Grande (15px - Extra Legible)</option>
+                      <option value="xl">Extra Grande (17px - Gigante)</option>
                     </select>
                   </div>
                 </div>
@@ -1311,7 +1356,7 @@ export default function Config() {
                     <p
                       className="font-black text-center uppercase leading-tight"
                       style={{
-                        fontSize: localSettings.ticketTitleSize === 'sm' ? '11px' : localSettings.ticketTitleSize === 'lg' ? '15px' : '13px'
+                        fontSize: localSettings.ticketTitleSize === 'sm' ? '13px' : localSettings.ticketTitleSize === 'lg' ? '19px' : localSettings.ticketTitleSize === 'xl' ? '22px' : '16px'
                       }}
                     >
                       {localSettings.nombreNegocio || 'MI TIENDITA'}
@@ -1319,7 +1364,7 @@ export default function Config() {
                     <div
                       className="text-center font-bold leading-tight my-1"
                       style={{
-                        fontSize: localSettings.ticketFontSize === 'sm' ? '8.5px' : localSettings.ticketFontSize === 'lg' ? '11px' : '9.5px'
+                        fontSize: localSettings.ticketFontSize === 'sm' ? '10px' : localSettings.ticketFontSize === 'lg' ? '13px' : localSettings.ticketFontSize === 'xl' ? '14.5px' : '11.5px'
                       }}
                     >
                       {localSettings.eslogan && <p className="italic">"{localSettings.eslogan}"</p>}
@@ -1333,7 +1378,7 @@ export default function Config() {
                     <div
                       className="font-bold leading-tight my-1 space-y-0.5"
                       style={{
-                        fontSize: localSettings.ticketFontSize === 'sm' ? '8.5px' : localSettings.ticketFontSize === 'lg' ? '11px' : '9.5px'
+                        fontSize: localSettings.ticketFontSize === 'sm' ? '10px' : localSettings.ticketFontSize === 'lg' ? '13px' : localSettings.ticketFontSize === 'xl' ? '14.5px' : '11.5px'
                       }}
                     >
                       <p>FECHA: 21/11/2026, 17:00</p>
@@ -1347,7 +1392,7 @@ export default function Config() {
                     <table
                       className="w-full border-collapse my-1 font-bold"
                       style={{
-                        fontSize: localSettings.ticketFontSize === 'sm' ? '9.5px' : localSettings.ticketFontSize === 'lg' ? '12.5px' : '11px',
+                        fontSize: localSettings.ticketFontSize === 'sm' ? '11px' : localSettings.ticketFontSize === 'lg' ? '15px' : localSettings.ticketFontSize === 'xl' ? '17px' : '13px',
                         tableLayout: 'fixed'
                       }}
                     >
@@ -1368,7 +1413,7 @@ export default function Config() {
                           <td style={{ width: '14%', textAlign: 'left', padding: '1px 0' }}>2</td>
                           <td style={{ width: '54%', textAlign: 'left', padding: '1px 0', wordBreak: 'break-word' }}>
                             CHICLE MAXI-AIR
-                            <span style={{ display: 'block', fontSize: '8px' }}>(2 x $1.00)</span>
+                            <span style={{ display: 'block', fontSize: '9px' }}>(2 x $1.00)</span>
                           </td>
                           <td style={{ width: '32%', textAlign: 'right', paddingRight: '1mm', fontFamily: 'monospace' }}>$2.00</td>
                         </tr>
@@ -1377,15 +1422,15 @@ export default function Config() {
 
                     <div className="w-full my-1 border-t-2 border-solid border-black"></div>
 
-                    <div className="flex justify-between items-center font-black my-1 w-full" style={{ fontSize: '15px' }}>
+                    <div className="flex justify-between items-center font-black my-1 w-full" style={{ fontSize: localSettings.ticketFontSize === 'sm' ? '16px' : localSettings.ticketFontSize === 'lg' ? '22px' : localSettings.ticketFontSize === 'xl' ? '26px' : '19px' }}>
                       <span>TOTAL:</span>
-                      <span className="font-mono text-[16px] font-black" style={{ paddingRight: '1mm' }}>$26.00</span>
+                      <span className="font-mono font-black" style={{ paddingRight: '1mm' }}>$26.00</span>
                     </div>
 
                     <div
                       className="font-bold leading-tight my-1 space-y-0.5 w-full"
                       style={{
-                        fontSize: localSettings.ticketFontSize === 'sm' ? '8.5px' : localSettings.ticketFontSize === 'lg' ? '11px' : '9.5px'
+                        fontSize: localSettings.ticketFontSize === 'sm' ? '10px' : localSettings.ticketFontSize === 'lg' ? '13px' : localSettings.ticketFontSize === 'xl' ? '14.5px' : '11.5px'
                       }}
                     >
                       <div className="flex justify-between"><span>RECIBIDO:</span><span className="font-mono" style={{ paddingRight: '1mm' }}>$30.00</span></div>

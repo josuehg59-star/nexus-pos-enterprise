@@ -723,10 +723,10 @@ export default function Reports() {
     }
 
     const dynFontFamily = settings.ticketFontFamily === 'monospace' ? 'monospace, "Courier New", Courier' : 'Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif';
-    const dynTitleSize = settings.ticketTitleSize === 'sm' ? '11px' : settings.ticketTitleSize === 'lg' ? '15px' : '13px';
-    const dynFontSize = settings.ticketFontSize === 'sm' ? '9.5px' : settings.ticketFontSize === 'lg' ? '12.5px' : '11px';
-    const dynDetailSize = settings.ticketFontSize === 'sm' ? '8.5px' : settings.ticketFontSize === 'lg' ? '11px' : '9.5px';
-    const dynPrintWidth = settings.ticketWidth === '80mm' ? '72mm' : '48mm';
+    const dynTitleSize = settings.ticketTitleSize === 'sm' ? '13px' : settings.ticketTitleSize === 'lg' ? '19px' : settings.ticketTitleSize === 'xl' ? '22px' : '16px';
+    const dynFontSize = settings.ticketFontSize === 'sm' ? '11px' : settings.ticketFontSize === 'lg' ? '15px' : settings.ticketFontSize === 'xl' ? '17px' : '13px';
+    const dynDetailSize = settings.ticketFontSize === 'sm' ? '10px' : settings.ticketFontSize === 'lg' ? '13px' : settings.ticketFontSize === 'xl' ? '14.5px' : '11.5px';
+    const dynTotalSize = settings.ticketFontSize === 'sm' ? '16px' : settings.ticketFontSize === 'lg' ? '22px' : settings.ticketFontSize === 'xl' ? '26px' : '19px';
     const dynShowLogo = settings.ticketShowLogo !== false;
     const items = ticket.items || ticket.cart || [];
     const itemRows = items.map((i: any) => {
@@ -769,23 +769,24 @@ export default function Reports() {
               print-color-adjust: exact !important;
             }
             body, html {
-              margin: 0;
-              padding: 0;
-              width: 100%;
-              background: #ffffff;
+              margin: 0 !important;
+              padding: 0 !important;
+              width: 100% !important;
+              background: #ffffff !important;
             }
             #ticket-reprint {
-              font-family: ${dynFontFamily};
-              font-size: ${dynFontSize};
+              font-family: ${dynFontFamily} !important;
+              font-size: ${dynFontSize} !important;
               font-weight: 800 !important;
               width: 100% !important;
-              max-width: ${dynPrintWidth} !important;
-              margin: 0 auto;
-              padding: 1mm 2mm 3mm 2mm;
-              box-sizing: border-box;
+              max-width: 100% !important;
+              min-width: 100% !important;
+              margin: 0 !important;
+              padding: 1mm 2.5mm 3mm 1.5mm !important;
+              box-sizing: border-box !important;
               color: #000000 !important;
-              word-break: break-word;
-              overflow: hidden;
+              word-break: break-word !important;
+              overflow: hidden !important;
             }
             .text-center { text-align: center; }
             .logo-img {
@@ -839,13 +840,13 @@ export default function Reports() {
             }
             th {
               border-bottom: 1.5px solid #000000;
-              padding: 1.5px 0;
-              font-size: 11px;
+              padding: 2px 0;
+              font-size: ${dynFontSize};
               font-weight: 800 !important;
             }
             td {
-              padding: 1.5px 0;
-              font-size: 11px;
+              padding: 2px 0;
+              font-size: ${dynFontSize};
               font-weight: 800 !important;
               vertical-align: top;
             }
@@ -856,7 +857,7 @@ export default function Reports() {
               display: flex;
               justify-content: space-between;
               align-items: center;
-              font-size: 16px;
+              font-size: ${dynTotalSize};
               font-weight: 900 !important;
               margin: 3px 0;
               width: 100%;
@@ -868,7 +869,7 @@ export default function Reports() {
             .row-flex {
               display: flex;
               justify-content: space-between;
-              font-size: 10.5px;
+              font-size: ${dynDetailSize};
               margin: 1px 0;
               font-weight: 800 !important;
               width: 100%;
@@ -929,6 +930,7 @@ export default function Reports() {
             ` : ''}
             <div class="dashed-sep"></div>
             <p class="footer-msg">* GRACIAS POR SU COMPRA *</p>
+            <div style="height: ${(settings.ticketFeedLines || 3) * 14}px;"></div>
           </div>
         </body>
       </html>

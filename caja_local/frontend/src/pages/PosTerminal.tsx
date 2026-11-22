@@ -96,7 +96,7 @@ function formatTicketDate(dStr: any) {
 
 export default function PosTerminal() {
   const { isOnline } = useLiveSyncStore();
-  const { nombreNegocio, rfc, eslogan, telefono, direccion, mercadoPagoToken, mercadoPagoDeviceId, servidorIp, clipApiKey, clipSecretKey, clipSerialNumber, clipModo, logo, cajaNombre, activeUser, usersList, requirePasswordLogin, ticketFontFamily, ticketFontSize, ticketTitleSize, ticketWidth, ticketShowLogo, ticketPrinterName, setSettings } = useSettings();
+  const { nombreNegocio, rfc, eslogan, telefono, direccion, mercadoPagoToken, mercadoPagoDeviceId, servidorIp, clipApiKey, clipSecretKey, clipSerialNumber, clipModo, logo, cajaNombre, activeUser, usersList, requirePasswordLogin, ticketFontFamily, ticketFontSize, ticketTitleSize, ticketWidth, ticketCharsPerLine, ticketFeedLines, ticketShowLogo, ticketPrinterName, setSettings } = useSettings();
   const searchInputRef = useRef<HTMLInputElement>(null);
   
   const { cart, total, addToCart, removeFromCart, updateQuantity, processSale, clearCart, restoreCart } = usePosStore();
@@ -744,10 +744,10 @@ export default function PosTerminal() {
   
   
   const dynFontFamily = ticketFontFamily === 'monospace' ? 'monospace, "Courier New", Courier' : 'Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif';
-  const dynTitleSize = ticketTitleSize === 'sm' ? '11px' : ticketTitleSize === 'lg' ? '15px' : '13px';
-  const dynFontSize = ticketFontSize === 'sm' ? '9.5px' : ticketFontSize === 'lg' ? '12.5px' : '11px';
-  const dynDetailSize = ticketFontSize === 'sm' ? '8.5px' : ticketFontSize === 'lg' ? '11px' : '9.5px';
-  const dynPrintWidth = ticketWidth === '80mm' ? '72mm' : '48mm';
+  const dynTitleSize = ticketTitleSize === 'sm' ? '13px' : ticketTitleSize === 'lg' ? '19px' : ticketTitleSize === 'xl' ? '22px' : '16px';
+  const dynFontSize = ticketFontSize === 'sm' ? '11px' : ticketFontSize === 'lg' ? '15px' : ticketFontSize === 'xl' ? '17px' : '13px';
+  const dynDetailSize = ticketFontSize === 'sm' ? '10px' : ticketFontSize === 'lg' ? '13px' : ticketFontSize === 'xl' ? '14.5px' : '11.5px';
+  const dynTotalSize = ticketFontSize === 'sm' ? '16px' : ticketFontSize === 'lg' ? '22px' : ticketFontSize === 'xl' ? '26px' : '19px';
 
   const printTicket = () => {
     try {
@@ -786,7 +786,7 @@ export default function PosTerminal() {
           * {
             box-sizing: border-box !important;
             color: #000000 !important;
-            font-family: Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif !important;
+            font-family: ${dynFontFamily} !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -798,9 +798,10 @@ export default function PosTerminal() {
           }
           #ticket-print {
             width: 100% !important;
-            max-width: ${dynPrintWidth} !important;
-            margin: 0 auto !important;
-            padding: 1mm 2mm 3mm 2mm !important;
+            max-width: 100% !important;
+            min-width: 100% !important;
+            margin: 0 !important;
+            padding: 1mm 2.5mm 3mm 1.5mm !important;
             box-sizing: border-box !important;
             font-family: ${dynFontFamily} !important;
             font-size: ${dynFontSize} !important;
@@ -820,9 +821,9 @@ export default function PosTerminal() {
             margin: 2px 0 !important;
           }
           #ticket-print th, #ticket-print td {
-            font-size: 11px !important;
+            font-size: ${dynFontSize} !important;
             font-weight: 800 !important;
-            padding: 1.5px 0 !important;
+            padding: 2px 0 !important;
             color: #000000 !important;
           }
           #ticket-print th {
@@ -1608,92 +1609,96 @@ export default function PosTerminal() {
 
             <p className="text-center text-xs font-black text-slate-500 uppercase tracking-widest mb-4">FOLIO #{lastTicket.folio} - {lastTicket.date}</p>
 
-            {/* TICKET TÉRMICO */}
-            <div 
-              id="ticket-print" 
-              className="bg-white p-3 text-black select-none mx-auto w-full max-w-[320px] shadow-sm rounded text-left" 
-              style={{ 
-                fontFamily: dynFontFamily,
-                color: "#000000", 
-                fontWeight: "800",
-                wordBreak: "break-word"
-              }}
-            >
-              <div className="text-center mb-1">
-                {ticketShowLogo !== false && logo && <img src={logo} alt="Logo" className="max-h-[50px] max-w-[120px] mx-auto mb-1 object-contain grayscale" />}
-                <p className="font-black leading-tight text-black uppercase" style={{ fontSize: dynTitleSize, wordBreak: "break-word" }}>{nombreNegocio}</p>
-              </div>
-              <div className="text-center font-black leading-tight my-0.5" style={{ fontSize: dynDetailSize, wordBreak: "break-word" }}>
-                {eslogan && <p className="italic font-bold">"{eslogan}"</p>}
-                <p className="mt-0.5 font-black">{direccion}</p>
-                {telefono && <p className="font-black">TEL: {telefono}</p>}
-                {rfc && <p className="font-black mt-0.5">RFC: {rfc}</p>}
-              </div>
+            {/* CONTENEDOR MODAL PANTALLA */}
+            <div className="w-full max-w-[340px] mx-auto">
+              {/* TICKET TÉRMICO */}
+              <div 
+                id="ticket-print" 
+                className="bg-white p-3 text-black select-none w-full shadow-sm rounded text-left" 
+                style={{ 
+                  fontFamily: dynFontFamily,
+                  color: "#000000", 
+                  fontWeight: "800",
+                  wordBreak: "break-word"
+                }}
+              >
+                <div className="text-center mb-1">
+                  {ticketShowLogo !== false && logo && <img src={logo} alt="Logo" className="max-h-[50px] max-w-[120px] mx-auto mb-1 object-contain grayscale" />}
+                  <p className="font-black leading-tight text-black uppercase" style={{ fontSize: dynTitleSize, wordBreak: "break-word" }}>{nombreNegocio}</p>
+                </div>
+                <div className="text-center font-black leading-tight my-0.5" style={{ fontSize: dynDetailSize, wordBreak: "break-word" }}>
+                  {eslogan && <p className="italic font-bold">"{eslogan}"</p>}
+                  <p className="mt-0.5 font-black">{direccion}</p>
+                  {telefono && <p className="font-black">TEL: {telefono}</p>}
+                  {rfc && <p className="font-black mt-0.5">RFC: {rfc}</p>}
+                </div>
 
-              <div className="w-full my-1 border-t border-dashed border-black"></div>
+                <div className="w-full my-1 border-t border-dashed border-black"></div>
 
-              <div className="font-black text-black leading-tight space-y-0.5 my-1" style={{ fontSize: dynDetailSize }}>
-                <p className="font-black">FECHA: {formatTicketDate(lastTicket.date)}</p>
-                <p className="font-black">FOLIO: #{lastTicket.folio}</p>
-                <p className="font-black">CAJA: {(lastTicket.caja || cajaNombre || 'CAJA 1 - PRINCIPAL').toUpperCase()}</p>
-                <p className="font-black">CAJERO: {(lastTicket.cajero || activeUser?.name || 'ADMINISTRADOR').toUpperCase()}</p>
-                <p className="font-black">CLIENTE: {(lastTicket.clientName || 'PUBLICO GENERAL').toUpperCase()}</p>
-                <p className="font-black">MÉTODO PAGO: {lastTicket.paymentMethod}</p>
-              </div>
+                <div className="font-black text-black leading-tight space-y-0.5 my-1" style={{ fontSize: dynDetailSize }}>
+                  <p className="font-black">FECHA: {formatTicketDate(lastTicket.date)}</p>
+                  <p className="font-black">FOLIO: #{lastTicket.folio}</p>
+                  <p className="font-black">CAJA: {(lastTicket.caja || cajaNombre || 'CAJA 1 - PRINCIPAL').toUpperCase()}</p>
+                  <p className="font-black">CAJERO: {(lastTicket.cajero || activeUser?.name || 'ADMINISTRADOR').toUpperCase()}</p>
+                  <p className="font-black">CLIENTE: {(lastTicket.clientName || 'PUBLICO GENERAL').toUpperCase()}</p>
+                  <p className="font-black">MÉTODO PAGO: {lastTicket.paymentMethod}</p>
+                </div>
 
-              <div className="w-full my-1 border-t border-dashed border-black"></div>
+                <div className="w-full my-1 border-t border-dashed border-black"></div>
 
-              <table className="w-full border-collapse my-1 font-black" style={{ fontSize: dynFontSize, tableLayout: "fixed" }}>
-                <thead>
-                  <tr style={{ borderBottom: "1.5px solid #000" }}>
-                    <th style={{ width: "14%", textAlign: "left", padding: "2px 0" }}>CT</th>
-                    <th style={{ width: "54%", textAlign: "left", padding: "2px 0" }}>DESCRIPCIÓN</th>
-                    <th style={{ width: "32%", textAlign: "right", padding: "2px 1.5mm 2px 0", whiteSpace: "nowrap" }}>TOTAL</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/30">
-                  {(lastTicket.items || lastTicket.cart || []).map((item: any) => (
-                    <tr key={item.id} style={{ verticalAlign: "top" }}>
-                      <td style={{ width: "14%", textAlign: "left", padding: "2px 0" }}>{item.cartQty}</td>
-                      <td style={{ width: "54%", textAlign: "left", padding: "2px 0", wordBreak: "break-word" }}>
-                        {item.name}
-                        {item.cartQty > 1 && <span style={{ display: "block", fontSize: "9px", fontWeight: "700" }}>({item.cartQty} x ${item.price?.toFixed(2)})</span>}
-                      </td>
-                      <td style={{ width: "32%", textAlign: "right", padding: "2px 1.5mm 2px 0", fontFamily: "monospace", whiteSpace: "nowrap" }}>${lineTotal(item).toFixed(2)}</td>
+                <table className="w-full border-collapse my-1 font-black" style={{ fontSize: dynFontSize, tableLayout: "fixed" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1.5px solid #000" }}>
+                      <th style={{ width: "14%", textAlign: "left", padding: "2px 0" }}>CT</th>
+                      <th style={{ width: "54%", textAlign: "left", padding: "2px 0" }}>DESCRIPCIÓN</th>
+                      <th style={{ width: "32%", textAlign: "right", padding: "2px 1.5mm 2px 0", whiteSpace: "nowrap" }}>TOTAL</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-black/30">
+                    {(lastTicket.items || lastTicket.cart || []).map((item: any) => (
+                      <tr key={item.id} style={{ verticalAlign: "top" }}>
+                        <td style={{ width: "14%", textAlign: "left", padding: "2px 0" }}>{item.cartQty}</td>
+                        <td style={{ width: "54%", textAlign: "left", padding: "2px 0", wordBreak: "break-word" }}>
+                          {item.name}
+                          {item.cartQty > 1 && <span style={{ display: "block", fontSize: "9px", fontWeight: "700" }}>({item.cartQty} x ${item.price?.toFixed(2)})</span>}
+                        </td>
+                        <td style={{ width: "32%", textAlign: "right", padding: "2px 1.5mm 2px 0", fontFamily: "monospace", whiteSpace: "nowrap" }}>${lineTotal(item).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
 
-              <div className="w-full my-1 border-t-2 border-solid border-black"></div>
+                <div className="w-full my-1 border-t-2 border-solid border-black"></div>
 
-              <div className="flex justify-between items-center text-[15px] font-black my-1 w-full">
-                <span>TOTAL:</span>
-                <span className="font-mono text-[16px] font-black" style={{ paddingRight: "1.5mm" }}>${(lastTicket.total || 0).toFixed(2)}</span>
+                <div className="flex justify-between items-center font-black my-1 w-full" style={{ fontSize: dynTotalSize }}>
+                  <span>TOTAL:</span>
+                  <span className="font-mono font-black" style={{ fontSize: dynTotalSize, paddingRight: "1.5mm" }}>${(lastTicket.total || 0).toFixed(2)}</span>
+                </div>
+
+                {lastTicket.paymentMethod === 'EFECTIVO' && (
+                  <div className="font-black leading-tight my-1 space-y-0.5 w-full" style={{ fontSize: dynDetailSize }}>
+                    <div className="flex justify-between"><span>RECIBIDO:</span><span className="font-mono" style={{ paddingRight: "1.5mm" }}>${(lastTicket.recibido || lastTicket.total || 0).toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>CAMBIO:</span><span className="font-mono" style={{ paddingRight: "1.5mm" }}>${Math.max(0, (lastTicket.recibido || 0) - (lastTicket.total || 0)).toFixed(2)}</span></div>
+                  </div>
+                )}
+                {lastTicket.paymentMethod === 'MIXTO' && (
+                  <div className="font-black leading-tight my-1 space-y-0.5 w-full" style={{ fontSize: dynDetailSize }}>
+                    <p className="text-center">FORMA DE PAGO: MIXTO</p>
+                    <p>• EN EFECTIVO: ${(lastTicket.montoEfectivo || 0).toFixed(2)}</p>
+                    <p>• {lastTicket.metodoMixtoSecundario || 'TARJETA'}: ${(lastTicket.montoTarjeta || lastTicket.montoTransferencia || ((lastTicket.total || 0) - (lastTicket.montoEfectivo || 0))).toFixed(2)}</p>
+                    {lastTicket.recibido && lastTicket.recibido > (lastTicket.montoEfectivo || 0) && (
+                      <>
+                        <p>• EFECTIVO RECIBIDO: ${(lastTicket.recibido || 0).toFixed(2)}</p>
+                        <p>• CAMBIO ENTREGADO: ${(lastTicket.cambio || 0).toFixed(2)}</p>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                <div className="w-full my-1 border-t border-dashed border-black"></div>
+                <p className="text-center font-black mt-1 text-[11px] tracking-wider">* GRACIAS POR SU COMPRA *</p>
+                <div style={{ height: `${(ticketFeedLines || 3) * 14}px` }}></div>
               </div>
-
-              {lastTicket.paymentMethod === 'EFECTIVO' && (
-                <div className="text-[10px] font-black leading-tight my-1 space-y-0.5 w-full">
-                  <div className="flex justify-between"><span>RECIBIDO:</span><span className="font-mono" style={{ paddingRight: "1.5mm" }}>${(lastTicket.recibido || lastTicket.total || 0).toFixed(2)}</span></div>
-                  <div className="flex justify-between"><span>CAMBIO:</span><span className="font-mono" style={{ paddingRight: "1.5mm" }}>${Math.max(0, (lastTicket.recibido || 0) - (lastTicket.total || 0)).toFixed(2)}</span></div>
-                </div>
-              )}
-              {lastTicket.paymentMethod === 'MIXTO' && (
-                <div className="text-[10px] font-black leading-tight my-1 space-y-0.5 w-full">
-                  <p className="text-center">FORMA DE PAGO: MIXTO</p>
-                  <p>• EN EFECTIVO: ${(lastTicket.montoEfectivo || 0).toFixed(2)}</p>
-                  <p>• {lastTicket.metodoMixtoSecundario || 'TARJETA'}: ${(lastTicket.montoTarjeta || lastTicket.montoTransferencia || ((lastTicket.total || 0) - (lastTicket.montoEfectivo || 0))).toFixed(2)}</p>
-                  {lastTicket.recibido && lastTicket.recibido > (lastTicket.montoEfectivo || 0) && (
-                    <>
-                      <p>• EFECTIVO RECIBIDO: ${(lastTicket.recibido || 0).toFixed(2)}</p>
-                      <p>• CAMBIO ENTREGADO: ${(lastTicket.cambio || 0).toFixed(2)}</p>
-                    </>
-                  )}
-                </div>
-              )}
-
-              <div className="w-full my-1 border-t border-dashed border-black"></div>
-              <p className="text-center font-black mt-1 text-[10px] tracking-wider">* GRACIAS POR SU COMPRA *</p>
             </div>
             {/* ACCIONES DEL TICKET */}
             <div className="flex gap-3 mb-6">
