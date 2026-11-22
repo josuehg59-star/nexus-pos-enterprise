@@ -688,13 +688,28 @@ export default function PosTerminal() {
 
   
   
-  const dynFontFamily = ticketFontFamily === 'monospace' ? 'monospace, "Courier New", Courier' : 'Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif';
-  const dynTitleSize = ticketTitleSize === 'sm' ? '16px' : ticketTitleSize === 'lg' ? '22px' : ticketTitleSize === 'xl' ? '26px' : ticketTitleSize === 'xxl' ? '30px' : '19px';
-  const dynDetailSize = ticketDetailSize === 'sm' ? '11px' : ticketDetailSize === 'lg' ? '14.5px' : ticketDetailSize === 'xl' ? '16px' : ticketDetailSize === 'xxl' ? '18px' : '13px';
-  const dynFontSize = ticketFontSize === 'sm' ? '12px' : ticketFontSize === 'lg' ? '16px' : ticketFontSize === 'xl' ? '18px' : ticketFontSize === 'xxl' ? '21px' : '14px';
-  const dynTotalSize = ticketTotalSize === 'sm' ? '18px' : ticketTotalSize === 'lg' ? '26px' : ticketTotalSize === 'xl' ? '30px' : ticketTotalSize === 'xxl' ? '34px' : '22px';
-  const dynFontWeight = ticketFontWeight === 'black' ? '900' : ticketFontWeight === 'normal' ? '500' : '700';
-  const headerAlign = ticketHeaderAlign === 'left' ? 'left' : 'center';
+function resolveTicketPx(val: any, defaultPx: number): string {
+  if (!val) return `${defaultPx}px`;
+  if (typeof val === 'number') return `${val}px`;
+  const str = String(val).trim();
+  if (str.endsWith('px') || str.endsWith('pt') || str.endsWith('mm')) return str;
+  const num = parseFloat(str);
+  if (!isNaN(num) && num > 0) return `${num}px`;
+  if (str === 'sm') return `${defaultPx - 2}px`;
+  if (str === 'md') return `${defaultPx}px`;
+  if (str === 'lg') return `${defaultPx + 4}px`;
+  if (str === 'xl') return `${defaultPx + 8}px`;
+  if (str === 'xxl') return `${defaultPx + 12}px`;
+  return `${defaultPx}px`;
+}
+
+  const dynFontFamily = ticketFontFamily || 'Consolas, monospace';
+  const dynTitleSize = resolveTicketPx(ticketTitleSize, 24);
+  const dynDetailSize = resolveTicketPx(ticketDetailSize, 14);
+  const dynFontSize = resolveTicketPx(ticketFontSize, 16);
+  const dynTotalSize = resolveTicketPx(ticketTotalSize, 26);
+  const dynFontWeight = ticketFontWeight === 'normal' ? '700' : '900';
+  const headerAlign = ticketHeaderAlign || 'center';
   const wordWrapMode = ticketWordWrap === false ? 'normal' : 'break-word';
 
   const printTicket = () => {

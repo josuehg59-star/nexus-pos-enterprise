@@ -743,13 +743,28 @@ export default function PosTerminal() {
 
   
   
-  const dynFontFamily = ticketFontFamily === 'monospace' ? 'monospace, "Courier New", Courier' : 'Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif';
-  const dynTitleSize = ticketTitleSize === 'sm' ? '16px' : ticketTitleSize === 'lg' ? '22px' : ticketTitleSize === 'xl' ? '26px' : ticketTitleSize === 'xxl' ? '30px' : '19px';
-  const dynDetailSize = ticketDetailSize === 'sm' ? '11px' : ticketDetailSize === 'lg' ? '14.5px' : ticketDetailSize === 'xl' ? '16px' : ticketDetailSize === 'xxl' ? '18px' : '13px';
-  const dynFontSize = ticketFontSize === 'sm' ? '12px' : ticketFontSize === 'lg' ? '16px' : ticketFontSize === 'xl' ? '18px' : ticketFontSize === 'xxl' ? '21px' : '14px';
-  const dynTotalSize = ticketTotalSize === 'sm' ? '18px' : ticketTotalSize === 'lg' ? '26px' : ticketTotalSize === 'xl' ? '30px' : ticketTotalSize === 'xxl' ? '34px' : '22px';
-  const dynFontWeight = ticketFontWeight === 'black' ? '900' : ticketFontWeight === 'normal' ? '500' : '700';
-  const headerAlign = ticketHeaderAlign === 'left' ? 'left' : 'center';
+function resolveTicketPx(val: any, defaultPx: number): string {
+  if (!val) return `${defaultPx}px`;
+  if (typeof val === 'number') return `${val}px`;
+  const str = String(val).trim();
+  if (str.endsWith('px') || str.endsWith('pt') || str.endsWith('mm')) return str;
+  const num = parseFloat(str);
+  if (!isNaN(num) && num > 0) return `${num}px`;
+  if (str === 'sm') return `${defaultPx - 2}px`;
+  if (str === 'md') return `${defaultPx}px`;
+  if (str === 'lg') return `${defaultPx + 4}px`;
+  if (str === 'xl') return `${defaultPx + 8}px`;
+  if (str === 'xxl') return `${defaultPx + 12}px`;
+  return `${defaultPx}px`;
+}
+
+  const dynFontFamily = ticketFontFamily || 'Consolas, monospace';
+  const dynTitleSize = resolveTicketPx(ticketTitleSize, 24);
+  const dynDetailSize = resolveTicketPx(ticketDetailSize, 14);
+  const dynFontSize = resolveTicketPx(ticketFontSize, 16);
+  const dynTotalSize = resolveTicketPx(ticketTotalSize, 26);
+  const dynFontWeight = ticketFontWeight === 'normal' ? '700' : '900';
+  const headerAlign = ticketHeaderAlign || 'center';
   const wordWrapMode = ticketWordWrap === false ? 'normal' : 'break-word';
 
   const printTicket = () => {
@@ -790,6 +805,9 @@ export default function PosTerminal() {
             box-sizing: border-box !important;
             color: #000000 !important;
             font-family: ${dynFontFamily} !important;
+            -webkit-font-smoothing: none !important;
+            font-smooth: never !important;
+            text-rendering: geometricPrecision !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -797,14 +815,16 @@ export default function PosTerminal() {
             margin: 0 !important;
             padding: 0 !important;
             width: 100% !important;
+            max-width: 100% !important;
             background: #ffffff !important;
+            text-align: left !important;
           }
           #ticket-print {
             width: 100% !important;
             max-width: 100% !important;
             min-width: 100% !important;
             margin: 0 !important;
-            padding: 1mm 2.5mm 3mm 1.5mm !important;
+            padding: 0 1mm 2mm 1mm !important;
             box-sizing: border-box !important;
             font-family: ${dynFontFamily} !important;
             font-size: ${dynFontSize} !important;
@@ -813,6 +833,7 @@ export default function PosTerminal() {
             font-weight: ${dynFontWeight} !important;
             border: none !important;
             box-shadow: none !important;
+            border-radius: 0 !important;
             overflow: hidden !important;
             word-break: ${wordWrapMode} !important;
             overflow-wrap: ${wordWrapMode} !important;
@@ -821,13 +842,13 @@ export default function PosTerminal() {
           .ticket-header {
             text-align: ${headerAlign} !important;
             width: 100% !important;
-            margin: 0 auto 3px auto !important;
+            margin: 0 0 3px 0 !important;
           }
           .ticket-logo {
-            max-height: 55px !important;
-            max-width: 130px !important;
+            max-height: 60px !important;
+            max-width: 140px !important;
             display: block !important;
-            margin: ${headerAlign === 'center' ? '0 auto 4px auto' : '0 0 4px 0'} !important;
+            margin: ${headerAlign === 'center' ? '0 auto 4px auto' : headerAlign === 'right' ? '0 0 4px auto' : '0 auto 4px 0'} !important;
             object-fit: contain !important;
             filter: grayscale(100%) !important;
           }
@@ -844,7 +865,7 @@ export default function PosTerminal() {
             font-size: ${dynDetailSize} !important;
             font-weight: ${dynFontWeight} !important;
             text-align: ${headerAlign} !important;
-            line-height: 1.2 !important;
+            line-height: 1.25 !important;
             margin: 0 !important;
             word-break: ${wordWrapMode} !important;
           }
@@ -863,7 +884,7 @@ export default function PosTerminal() {
             line-height: 1.2 !important;
           }
           #ticket-print th {
-            border-bottom: 1.5px solid #000000 !important;
+            border-bottom: 2px solid #000000 !important;
             font-weight: 900 !important;
           }
           .ticket-total-row {
@@ -872,12 +893,13 @@ export default function PosTerminal() {
           }
         </style>
       `;
-            if ((window as any).require && ticketPrinterName) {
+      if ((window as any).require && ticketPrinterName) {
         try {
           const { ipcRenderer } = (window as any).require('electron');
           ipcRenderer.invoke('print-ticket-html', {
             html: '<html><head><title>Ticket NEXUS POS</title>' + styles + printStyles + '</head><body style="margin:0; padding:0; background:white; width: 100%;">' + el.outerHTML + '</body></html>',
             deviceName: ticketPrinterName,
+            ticketWidth: ticketWidth || '58mm',
             silent: true
           });
           return;
@@ -1665,17 +1687,17 @@ export default function PosTerminal() {
                   whiteSpace: "normal"
                 }}
               >
-                <div className="ticket-header" style={{ textAlign: headerAlign, width: "100%", margin: "0 auto 3px auto" }}>
+                <div className="ticket-header" style={{ textAlign: headerAlign, width: "100%", margin: "0 0 3px 0" }}>
                   {ticketShowLogo !== false && logo && (
                     <img 
                       src={logo} 
                       alt="Logo" 
                       className="ticket-logo" 
                       style={{ 
-                        maxHeight: "55px", 
-                        maxWidth: "130px", 
+                        maxHeight: "60px", 
+                        maxWidth: "140px", 
                         display: "block", 
-                        margin: headerAlign === "center" ? "0 auto 4px auto" : "0 0 4px 0", 
+                        margin: headerAlign === "center" ? "0 auto 4px auto" : headerAlign === "right" ? "0 0 4px auto" : "0 auto 4px 0", 
                         objectFit: "contain", 
                         filter: "grayscale(100%)" 
                       }} 
@@ -1683,7 +1705,7 @@ export default function PosTerminal() {
                   )}
                   <p className="ticket-title" style={{ fontSize: dynTitleSize, fontWeight: "900", textAlign: headerAlign, wordBreak: wordWrapMode, textTransform: "uppercase", lineHeight: 1.15, margin: "0 0 2px 0" }}>{nombreNegocio}</p>
                 </div>
-                <div className="ticket-details" style={{ fontSize: dynDetailSize, fontWeight: dynFontWeight, textAlign: headerAlign, wordBreak: wordWrapMode, lineHeight: 1.2 }}>
+                <div className="ticket-details" style={{ fontSize: dynDetailSize, fontWeight: dynFontWeight, textAlign: headerAlign, wordBreak: wordWrapMode, lineHeight: 1.25 }}>
                   {eslogan && <p style={{ fontStyle: "italic", fontWeight: "700" }}>"{eslogan}"</p>}
                   <p style={{ marginTop: "2px", fontWeight: dynFontWeight }}>{direccion}</p>
                   {telefono && <p style={{ fontWeight: dynFontWeight }}>TEL: {telefono}</p>}
@@ -1708,7 +1730,7 @@ export default function PosTerminal() {
                     <tr style={{ borderBottom: "1.5px solid #000" }}>
                       <th style={{ width: "14%", textAlign: "left", padding: "2px 0", fontWeight: "900" }}>CT</th>
                       <th style={{ width: "54%", textAlign: "left", padding: "2px 0", fontWeight: "900" }}>DESCRIPCIÓN</th>
-                      <th style={{ width: "32%", textAlign: "right", padding: "2px 1.5mm 2px 0", whiteSpace: "nowrap", fontWeight: "900" }}>TOTAL</th>
+                      <th style={{ width: "32%", textAlign: "right", padding: "2px 1mm 2px 0", whiteSpace: "nowrap", fontWeight: "900" }}>TOTAL</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/30">
@@ -1717,9 +1739,9 @@ export default function PosTerminal() {
                         <td style={{ width: "14%", textAlign: "left", padding: "2px 0", fontWeight: dynFontWeight }}>{item.cartQty}</td>
                         <td style={{ width: "54%", textAlign: "left", padding: "2px 0", wordBreak: wordWrapMode, fontWeight: dynFontWeight }}>
                           {item.name}
-                          {item.cartQty > 1 && <span style={{ display: "block", fontSize: "10px", fontWeight: "700" }}>({item.cartQty} x ${item.price?.toFixed(2)})</span>}
+                          {item.cartQty > 1 && <span style={{ display: "block", fontSize: `calc(${dynFontSize} - 2px)`, fontWeight: "700" }}>({item.cartQty} x ${item.price?.toFixed(2)})</span>}
                         </td>
-                        <td style={{ width: "32%", textAlign: "right", padding: "2px 1.5mm 2px 0", fontFamily: "monospace", whiteSpace: "nowrap", fontWeight: dynFontWeight }}>${lineTotal(item).toFixed(2)}</td>
+                        <td style={{ width: "32%", textAlign: "right", padding: "2px 1mm 2px 0", fontFamily: "monospace", whiteSpace: "nowrap", fontWeight: dynFontWeight }}>${lineTotal(item).toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1729,13 +1751,13 @@ export default function PosTerminal() {
 
                 <div className="flex justify-between items-center my-1 w-full ticket-total-row" style={{ fontSize: dynTotalSize, fontWeight: "900" }}>
                   <span>TOTAL:</span>
-                  <span className="font-mono" style={{ fontSize: dynTotalSize, fontWeight: "900", paddingRight: "1.5mm" }}>${(lastTicket.total || 0).toFixed(2)}</span>
+                  <span className="font-mono" style={{ fontSize: dynTotalSize, fontWeight: "900", paddingRight: "1mm" }}>${(lastTicket.total || 0).toFixed(2)}</span>
                 </div>
 
                 {lastTicket.paymentMethod === 'EFECTIVO' && (
                   <div className="leading-tight my-1 space-y-0.5 w-full" style={{ fontSize: dynDetailSize, fontWeight: dynFontWeight }}>
-                    <div className="flex justify-between"><span>RECIBIDO:</span><span className="font-mono" style={{ paddingRight: "1.5mm" }}>${(lastTicket.recibido || lastTicket.total || 0).toFixed(2)}</span></div>
-                    <div className="flex justify-between"><span>CAMBIO:</span><span className="font-mono" style={{ paddingRight: "1.5mm" }}>${Math.max(0, (lastTicket.recibido || 0) - (lastTicket.total || 0)).toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>RECIBIDO:</span><span className="font-mono" style={{ paddingRight: "1mm" }}>${(lastTicket.recibido || lastTicket.total || 0).toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>CAMBIO:</span><span className="font-mono" style={{ paddingRight: "1mm" }}>${Math.max(0, (lastTicket.recibido || 0) - (lastTicket.total || 0)).toFixed(2)}</span></div>
                   </div>
                 )}
                 {lastTicket.paymentMethod === 'MIXTO' && (
@@ -1753,7 +1775,7 @@ export default function PosTerminal() {
                 )}
 
                 <div className="w-full my-1 border-t border-dashed border-black"></div>
-                <p className="text-center font-black mt-1 text-[11px] tracking-wider">* GRACIAS POR SU COMPRA *</p>
+                <p className="text-center font-black mt-1 tracking-wider" style={{ fontSize: dynDetailSize }}>* GRACIAS POR SU COMPRA *</p>
                 <div style={{ height: `${(ticketFeedLines || 3) * 14}px` }}></div>
               </div>
             </div>

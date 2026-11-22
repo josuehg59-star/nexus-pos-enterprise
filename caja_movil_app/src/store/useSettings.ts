@@ -28,16 +28,16 @@ interface SettingsState {
   requirePasswordLogin: boolean;
   preventNegativeStock: boolean;
   ticketPrinterName: string;
-  ticketFontFamily: 'sans-serif' | 'monospace';
+  ticketFontFamily: string;
   ticketFontWeight: 'bold' | 'black' | 'normal';
-  ticketTitleSize: 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
-  ticketDetailSize: 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
-  ticketFontSize: 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
-  ticketTotalSize: 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+  ticketTitleSize: string | number;
+  ticketDetailSize: string | number;
+  ticketFontSize: string | number;
+  ticketTotalSize: string | number;
   ticketWidth: '58mm' | '80mm';
   ticketCharsPerLine: number;
   ticketFeedLines: number;
-  ticketHeaderAlign: 'center' | 'left';
+  ticketHeaderAlign: 'center' | 'left' | 'right';
   ticketWordWrap: boolean;
   ticketShowLogo: boolean;
   activeUser: UserItem;
@@ -65,6 +65,19 @@ if (savedActiveUserRaw) {
   try { savedActiveUser = JSON.parse(savedActiveUserRaw); } catch (e) {}
 }
 
+function parseStoredSize(key: string, defaultNum: number): number {
+  const val = localStorage.getItem(key);
+  if (!val) return defaultNum;
+  const num = parseInt(val, 10);
+  if (!isNaN(num) && num > 0) return num;
+  if (val === 'sm') return defaultNum - 2;
+  if (val === 'md') return defaultNum;
+  if (val === 'lg') return defaultNum + 4;
+  if (val === 'xl') return defaultNum + 8;
+  if (val === 'xxl') return defaultNum + 12;
+  return defaultNum;
+}
+
 export const useSettings = create<SettingsState>((set) => ({
   nombreNegocio: localStorage.getItem('nexus_nombreNegocio') || localStorage.getItem('titan_master_name') || 'MI TIENDITA "MISCELANEA BRITTANY"',
   rfc: localStorage.getItem('nexus_rfc') || 'HEGJ8004018I9',
@@ -86,12 +99,12 @@ export const useSettings = create<SettingsState>((set) => ({
   requirePasswordLogin: localStorage.getItem('nexus_requirePasswordLogin') === 'true',
   preventNegativeStock: localStorage.getItem('nexus_preventNegativeStock') !== 'false',
   ticketPrinterName: localStorage.getItem('nexus_selected_printer') || '',
-  ticketFontFamily: ((localStorage.getItem('nexus_ticketFontFamily') as any) || 'monospace'),
+  ticketFontFamily: localStorage.getItem('nexus_ticketFontFamily') || 'Consolas, monospace',
   ticketFontWeight: ((localStorage.getItem('nexus_ticketFontWeight') as any) || 'black'),
-  ticketTitleSize: ((localStorage.getItem('nexus_ticketTitleSize') as any) || 'md'),
-  ticketDetailSize: ((localStorage.getItem('nexus_ticketDetailSize') as any) || 'md'),
-  ticketFontSize: ((localStorage.getItem('nexus_ticketFontSize') as any) || 'md'),
-  ticketTotalSize: ((localStorage.getItem('nexus_ticketTotalSize') as any) || 'md'),
+  ticketTitleSize: parseStoredSize('nexus_ticketTitleSize', 24),
+  ticketDetailSize: parseStoredSize('nexus_ticketDetailSize', 14),
+  ticketFontSize: parseStoredSize('nexus_ticketFontSize', 16),
+  ticketTotalSize: parseStoredSize('nexus_ticketTotalSize', 26),
   ticketWidth: ((localStorage.getItem('nexus_ticketWidth') as any) || '58mm'),
   ticketCharsPerLine: parseInt(localStorage.getItem('nexus_ticketCharsPerLine') || '32', 10),
   ticketFeedLines: parseInt(localStorage.getItem('nexus_ticketFeedLines') || '3', 10),
@@ -126,10 +139,10 @@ export const useSettings = create<SettingsState>((set) => ({
     if (settings.ticketPrinterName !== undefined) localStorage.setItem('nexus_selected_printer', settings.ticketPrinterName);
     if (settings.ticketFontFamily !== undefined) localStorage.setItem('nexus_ticketFontFamily', settings.ticketFontFamily);
     if (settings.ticketFontWeight !== undefined) localStorage.setItem('nexus_ticketFontWeight', settings.ticketFontWeight);
-    if (settings.ticketTitleSize !== undefined) localStorage.setItem('nexus_ticketTitleSize', settings.ticketTitleSize);
-    if (settings.ticketDetailSize !== undefined) localStorage.setItem('nexus_ticketDetailSize', settings.ticketDetailSize);
-    if (settings.ticketFontSize !== undefined) localStorage.setItem('nexus_ticketFontSize', settings.ticketFontSize);
-    if (settings.ticketTotalSize !== undefined) localStorage.setItem('nexus_ticketTotalSize', settings.ticketTotalSize);
+    if (settings.ticketTitleSize !== undefined) localStorage.setItem('nexus_ticketTitleSize', String(settings.ticketTitleSize));
+    if (settings.ticketDetailSize !== undefined) localStorage.setItem('nexus_ticketDetailSize', String(settings.ticketDetailSize));
+    if (settings.ticketFontSize !== undefined) localStorage.setItem('nexus_ticketFontSize', String(settings.ticketFontSize));
+    if (settings.ticketTotalSize !== undefined) localStorage.setItem('nexus_ticketTotalSize', String(settings.ticketTotalSize));
     if (settings.ticketWidth !== undefined) localStorage.setItem('nexus_ticketWidth', settings.ticketWidth);
     if (settings.ticketCharsPerLine !== undefined) localStorage.setItem('nexus_ticketCharsPerLine', String(settings.ticketCharsPerLine));
     if (settings.ticketFeedLines !== undefined) localStorage.setItem('nexus_ticketFeedLines', String(settings.ticketFeedLines));

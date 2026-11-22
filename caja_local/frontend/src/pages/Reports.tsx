@@ -704,6 +704,21 @@ export default function Reports() {
     `;
   };
 
+function resolveTicketPx(val: any, defaultPx: number): string {
+  if (!val) return `${defaultPx}px`;
+  if (typeof val === 'number') return `${val}px`;
+  const str = String(val).trim();
+  if (str.endsWith('px') || str.endsWith('pt') || str.endsWith('mm')) return str;
+  const num = parseFloat(str);
+  if (!isNaN(num) && num > 0) return `${num}px`;
+  if (str === 'sm') return `${defaultPx - 3}px`;
+  if (str === 'md') return `${defaultPx}px`;
+  if (str === 'lg') return `${defaultPx + 3}px`;
+  if (str === 'xl') return `${defaultPx + 6}px`;
+  if (str === 'xxl') return `${defaultPx + 10}px`;
+  return `${defaultPx}px`;
+}
+
   const generateTicketHTML = (ticket: any) => {
     const settings = useSettings.getState();
     const companyName = (settings.nombreNegocio || 'MI TIENDITA').toUpperCase();
@@ -722,13 +737,13 @@ export default function Reports() {
       dateStr = String(ticket.date || '');
     }
 
-    const dynFontFamily = settings.ticketFontFamily === 'monospace' ? 'monospace, "Courier New", Courier' : 'Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif';
-    const dynTitleSize = settings.ticketTitleSize === 'sm' ? '16px' : settings.ticketTitleSize === 'lg' ? '22px' : settings.ticketTitleSize === 'xl' ? '26px' : settings.ticketTitleSize === 'xxl' ? '30px' : '19px';
-    const dynDetailSize = settings.ticketDetailSize === 'sm' ? '11px' : settings.ticketDetailSize === 'lg' ? '14.5px' : settings.ticketDetailSize === 'xl' ? '16px' : settings.ticketDetailSize === 'xxl' ? '18px' : '13px';
-    const dynFontSize = settings.ticketFontSize === 'sm' ? '12px' : settings.ticketFontSize === 'lg' ? '16px' : settings.ticketFontSize === 'xl' ? '18px' : settings.ticketFontSize === 'xxl' ? '21px' : '14px';
-    const dynTotalSize = settings.ticketTotalSize === 'sm' ? '18px' : settings.ticketTotalSize === 'lg' ? '26px' : settings.ticketTotalSize === 'xl' ? '30px' : settings.ticketTotalSize === 'xxl' ? '34px' : '22px';
-    const dynFontWeight = settings.ticketFontWeight === 'black' ? '900' : settings.ticketFontWeight === 'normal' ? '500' : '700';
-    const headerAlign = settings.ticketHeaderAlign === 'left' ? 'left' : 'center';
+    const dynFontFamily = settings.ticketFontFamily || 'Consolas, monospace';
+    const dynTitleSize = resolveTicketPx(settings.ticketTitleSize, 24);
+    const dynDetailSize = resolveTicketPx(settings.ticketDetailSize, 14);
+    const dynFontSize = resolveTicketPx(settings.ticketFontSize, 16);
+    const dynTotalSize = resolveTicketPx(settings.ticketTotalSize, 26);
+    const dynFontWeight = settings.ticketFontWeight === 'normal' ? '700' : '900';
+    const headerAlign = settings.ticketHeaderAlign || 'center';
     const wordWrapMode = settings.ticketWordWrap === false ? 'normal' : 'break-word';
     const dynShowLogo = settings.ticketShowLogo !== false;
     const items = ticket.items || ticket.cart || [];
@@ -742,7 +757,7 @@ export default function Reports() {
           <td class="cant-col">${qty}</td>
           <td class="desc-col">
             ${nameStr}
-            ${qty > 1 ? `<br/><span style="font-size:9px; font-weight:700;">(${qty} x $${price.toFixed(2)})</span>` : ''}
+            ${qty > 1 ? `<br/><span style="font-size:calc(${dynFontSize} - 2px); font-weight:700;">(${qty} x $${price.toFixed(2)})</span>` : ''}
           </td>
           <td class="tot-col">$${totalLine.toFixed(2)}</td>
         </tr>
@@ -768,6 +783,9 @@ export default function Reports() {
               box-sizing: border-box;
               color: #000000 !important;
               font-family: ${dynFontFamily} !important;
+              -webkit-font-smoothing: none !important;
+              font-smooth: never !important;
+              text-rendering: geometricPrecision !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
@@ -775,7 +793,9 @@ export default function Reports() {
               margin: 0 !important;
               padding: 0 !important;
               width: 100% !important;
+              max-width: 100% !important;
               background: #ffffff !important;
+              text-align: left !important;
             }
             #ticket-reprint {
               font-family: ${dynFontFamily} !important;
@@ -785,7 +805,7 @@ export default function Reports() {
               max-width: 100% !important;
               min-width: 100% !important;
               margin: 0 !important;
-              padding: 1mm 2.5mm 3mm 1.5mm !important;
+              padding: 0 1mm 2mm 1mm !important;
               box-sizing: border-box !important;
               color: #000000 !important;
               word-break: ${wordWrapMode} !important;
@@ -796,13 +816,13 @@ export default function Reports() {
             .header-sec {
               text-align: ${headerAlign} !important;
               width: 100% !important;
-              margin: 0 auto 3px auto !important;
+              margin: 0 0 3px 0 !important;
             }
             .logo-img {
-              max-height: 55px;
-              max-width: 130px;
+              max-height: 60px;
+              max-width: 140px;
               display: block;
-              margin: ${headerAlign === 'center' ? '0 auto 4px auto' : '0 0 4px 0'};
+              margin: ${headerAlign === 'center' ? '0 auto 4px auto' : headerAlign === 'right' ? '0 0 4px auto' : '0 auto 4px 0'};
               object-fit: contain;
               filter: grayscale(100%);
             }

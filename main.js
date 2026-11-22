@@ -131,12 +131,16 @@ ipcMain.handle('get-system-printers', async (event) => {
   }
 });
 
-ipcMain.handle('print-ticket-html', async (event, { html, deviceName, silent, copies }) => {
+ipcMain.handle('print-ticket-html', async (event, { html, deviceName, silent, copies, ticketWidth }) => {
   try {
+    const is80 = ticketWidth === '80mm';
+    // Ancho a 96 DPI: 58mm = ~219px (usamos 215), 80mm = ~302px (usamos 300)
+    const winWidth = is80 ? 300 : 215;
+
     const printWin = new BrowserWindow({
       show: false,
-      width: 420,
-      height: 700,
+      width: winWidth,
+      height: 800,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true
