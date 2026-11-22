@@ -722,6 +722,12 @@ export default function Reports() {
       dateStr = String(ticket.date || '');
     }
 
+    const dynFontFamily = settings.ticketFontFamily === 'monospace' ? 'monospace, "Courier New", Courier' : 'Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif';
+    const dynTitleSize = settings.ticketTitleSize === 'sm' ? '11px' : settings.ticketTitleSize === 'lg' ? '15px' : '13px';
+    const dynFontSize = settings.ticketFontSize === 'sm' ? '9.5px' : settings.ticketFontSize === 'lg' ? '12.5px' : '11px';
+    const dynDetailSize = settings.ticketFontSize === 'sm' ? '8.5px' : settings.ticketFontSize === 'lg' ? '11px' : '9.5px';
+    const dynPrintWidth = settings.ticketWidth === '80mm' ? '72mm' : '48mm';
+    const dynShowLogo = settings.ticketShowLogo !== false;
     const items = ticket.items || ticket.cart || [];
     const itemRows = items.map((i: any) => {
       const qty = i.cartQty || i.qty || 1;
@@ -758,7 +764,7 @@ export default function Reports() {
               padding: 0;
               box-sizing: border-box;
               color: #000000 !important;
-              font-family: Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif !important;
+              font-family: ${dynFontFamily} !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
@@ -769,11 +775,11 @@ export default function Reports() {
               background: #ffffff;
             }
             #ticket-reprint {
-              font-family: Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif;
-              font-size: 11px;
+              font-family: ${dynFontFamily};
+              font-size: ${dynFontSize};
               font-weight: 800 !important;
               width: 100% !important;
-              max-width: 48mm !important;
+              max-width: ${dynPrintWidth} !important;
               margin: 0 auto;
               padding: 1mm 2mm 3mm 2mm;
               box-sizing: border-box;
@@ -791,7 +797,7 @@ export default function Reports() {
               filter: grayscale(100%);
             }
             .store-title {
-              font-size: 13px;
+              font-size: ${dynTitleSize};
               font-weight: 900 !important;
               line-height: 1.2;
               margin-bottom: 2px;
@@ -800,7 +806,7 @@ export default function Reports() {
               word-break: break-word;
             }
             .store-subtitle {
-              font-size: 9.5px;
+              font-size: ${dynDetailSize};
               font-weight: 800 !important;
               line-height: 1.25;
               margin-bottom: 2px;
@@ -818,7 +824,7 @@ export default function Reports() {
               margin: 3px 0;
             }
             .meta-info {
-              font-size: 10px;
+              font-size: ${dynDetailSize};
               font-weight: 800 !important;
               line-height: 1.3;
               margin: 2px 0;
@@ -829,7 +835,7 @@ export default function Reports() {
               border-collapse: collapse;
               margin: 2px 0;
               table-layout: fixed;
-              font-size: 11px;
+              font-size: ${dynFontSize};
             }
             th {
               border-bottom: 1.5px solid #000000;
@@ -881,7 +887,7 @@ export default function Reports() {
         </head>
         <body>
           <div id="ticket-reprint">
-            ${logoUrl ? `<img src="${logoUrl}" class="logo-img" alt="Logo" />` : ''}
+            ${dynShowLogo && logoUrl ? `<img src="${logoUrl}" class="logo-img" alt="Logo" />` : ''}
             <p class="store-title">${companyName}</p>
             <div class="store-subtitle">
               ${slogan ? `<p>"${slogan}"</p>` : ''}

@@ -3,7 +3,7 @@ import { useSettings } from '../store/useSettings';
 import { compressImageFile } from '../utils/imageCompressor';
 import { useLiveQuery } from 'dexie-react-hooks';
 
-import { Server, ShieldCheck, SmartphoneNfc, Download, AlertTriangle, UploadCloud, Search, Save, CreditCard, RefreshCw, Wifi, Laptop, Radio } from 'lucide-react';
+import { Printer, Server, ShieldCheck, SmartphoneNfc, Download, AlertTriangle, UploadCloud, Search, Save, CreditCard, RefreshCw, Wifi, Laptop, Radio } from 'lucide-react';
 import { db } from '../store/database';
 import { buildBackup, downloadBackupFile, restoreBackup, backupToDisk } from '../store/backup';
 
@@ -14,8 +14,15 @@ export default function Config() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const manualBackupRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const { nombreNegocio, rfc, eslogan, telefono, email, direccion, logo: storeLogo, cajaNombre, rolCaja, servidorIp, requirePasswordLogin, usersList, activeUser, mercadoPagoToken, mercadoPagoDeviceId, terminalBancariaModo, clipApiKey, clipSecretKey, clipSerialNumber, clipModo, bancoDefault, setSettings } = useSettings();
-  const [localSettings, setLocalSettings] = useState({ nombreNegocio, rfc, eslogan, telefono, email, direccion, logo: storeLogo, cajaNombre, rolCaja, servidorIp, requirePasswordLogin, usersList, activeUser, mercadoPagoToken, mercadoPagoDeviceId, terminalBancariaModo, clipApiKey: clipApiKey || '', clipSecretKey: clipSecretKey || '', clipSerialNumber: clipSerialNumber || '', clipModo: clipModo || 'MANUAL', bancoDefault: bancoDefault || 'BBVA / BANCOMER' });
+  const { nombreNegocio, rfc, eslogan, telefono, email, direccion, logo: storeLogo, cajaNombre, rolCaja, servidorIp, requirePasswordLogin, usersList, activeUser, mercadoPagoToken, mercadoPagoDeviceId, terminalBancariaModo, clipApiKey, clipSecretKey, clipSerialNumber, clipModo, bancoDefault, ticketPrinterName, ticketFontFamily, ticketFontSize, ticketTitleSize, ticketWidth, ticketShowLogo, setSettings } = useSettings();
+  const [localSettings, setLocalSettings] = useState({ nombreNegocio, rfc, eslogan, telefono, email, direccion, logo: storeLogo, cajaNombre, rolCaja, servidorIp, requirePasswordLogin, usersList, activeUser, mercadoPagoToken, mercadoPagoDeviceId, terminalBancariaModo, clipApiKey: clipApiKey || '', clipSecretKey: clipSecretKey || '', clipSerialNumber: clipSerialNumber || '', clipModo: clipModo || 'MANUAL', bancoDefault: bancoDefault || 'BBVA / BANCOMER',
+    ticketPrinterName: ticketPrinterName || '',
+    ticketFontFamily: ticketFontFamily || 'sans-serif',
+    ticketFontSize: ticketFontSize || 'md',
+    ticketTitleSize: ticketTitleSize || 'md',
+    ticketWidth: ticketWidth || '58mm',
+    ticketShowLogo: ticketShowLogo !== false
+  });
   const [testConnStatus, setTestConnStatus] = useState<'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR'>('IDLE');
   const [testConnMsg, setTestConnMsg] = useState('');
   const [syncProdsStatus, setSyncProdsStatus] = useState<'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR'>('IDLE');
@@ -37,6 +44,201 @@ export default function Config() {
       })
       .catch(() => {});
   }, []);
+
+
+  const [printersList, setPrintersList] = useState<any[]>([]);
+  const [loadingPrinters, setLoadingPrinters] = useState(false);
+  const [testPrintFeedback, setTestPrintFeedback] = useState<string | null>(null);
+
+  const fetchPrinters = async () => {
+    setLoadingPrinters(true);
+    if ((window as any).require) {
+      try {
+        const { ipcRenderer } = (window as any).require('electron');
+        const list = await ipcRenderer.invoke('get-system-printers');
+        if (Array.isArray(list)) {
+          setPrintersList(list);
+          if (!localSettings.ticketPrinterName && list.length > 0) {
+            const def = list.find((p: any) => p.isDefault) || list[0];
+            setLocalSettings(prev => ({ ...prev, ticketPrinterName: def.name }));
+          }
+        }
+      } catch (err) {
+        console.warn('Error fetching printers in Config:', err);
+      }
+    }
+    setLoadingPrinters(false);
+  };
+
+  useEffect(() => {
+    fetchPrinters();
+  }, []);
+
+  const handlePrintTestTicket = async () => {
+    setTestPrintFeedback('Enviando ticket de prueba...');
+    const fontFam = localSettings.ticketFontFamily === 'monospace' ? 'monospace, "Courier New", Courier' : 'Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif';
+    const titleSz = localSettings.ticketTitleSize === 'sm' ? '11px' : localSettings.ticketTitleSize === 'lg' ? '15px' : '13px';
+    const contentSz = localSettings.ticketFontSize === 'sm' ? '9.5px' : localSettings.ticketFontSize === 'lg' ? '12.5px' : '11px';
+    const detailSz = localSettings.ticketFontSize === 'sm' ? '8.5px' : localSettings.ticketFontSize === 'lg' ? '11px' : '9.5px';
+    const printW = localSettings.ticketWidth === '80mm' ? '72mm' : '48mm';
+
+    const testHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Ticket de Prueba</title>
+          <style>
+            @page { margin: 0; size: auto; }
+            * { margin: 0; padding: 0; box-sizing: border-box; color: #000000 !important; font-family: ${fontFam} !important; }
+            body, html { width: 100%; margin: 0; padding: 0; background: #fff; }
+            #test-ticket {
+              width: 100%;
+              max-width: ${printW};
+              margin: 0 auto;
+              padding: 1mm 2mm 3mm 2mm;
+              box-sizing: border-box;
+              font-size: ${contentSz};
+              font-weight: 800;
+              word-break: break-word;
+            }
+            .dashed-sep { width: 100%; border-top: 1.5px dashed #000; margin: 3px 0; }
+            .solid-sep { width: 100%; border-top: 1.5px solid #000; margin: 3px 0; }
+          </style>
+        </head>
+        <body>
+          <div id="test-ticket">
+            ${localSettings.ticketShowLogo && localSettings.logo ? `<img src="${localSettings.logo}" style="max-height:50px; max-width:120px; display:block; margin:0 auto 2px auto; object-fit:contain; filter:grayscale(100%);" />` : ''}
+            <p style="font-size: ${titleSz}; font-weight: 900; text-align: center; text-transform: uppercase; line-height: 1.2; margin-bottom: 2px;">${localSettings.nombreNegocio || 'MI TIENDITA'}</p>
+            <div style="font-size: ${detailSz}; font-weight: 800; text-align: center; line-height: 1.25; margin-bottom: 2px;">
+              ${localSettings.eslogan ? `<p>"${localSettings.eslogan}"</p>` : ''}
+              ${localSettings.direccion ? `<p>${localSettings.direccion}</p>` : ''}
+              ${localSettings.telefono ? `<p>TEL: ${localSettings.telefono}</p>` : ''}
+              ${localSettings.rfc ? `<p>RFC: ${localSettings.rfc}</p>` : ''}
+            </div>
+            <div class="dashed-sep"></div>
+            <p style="text-align: center; font-size: ${detailSz}; font-weight: 900; letter-spacing: 1px;">*** TICKET DE PRUEBA ***</p>
+            <div style="font-size: ${detailSz}; font-weight: 800; line-height: 1.3; margin: 2px 0;">
+              <p>FECHA: ${new Date().toLocaleString('es-MX')}</p>
+              <p>FOLIO: #PRUEBA-001</p>
+              <p>CAJA: ${(localSettings.cajaNombre || 'CAJA 1').toUpperCase()}</p>
+              <p>CAJERO: ${(localSettings.activeUser?.name || 'ADMINISTRADOR').toUpperCase()}</p>
+              <p>CLIENTE: PUBLICO GENERAL</p>
+            </div>
+            <div class="dashed-sep"></div>
+            <table style="width: 100%; border-collapse: collapse; table-layout: fixed; font-size: ${contentSz}; font-weight: 800; margin: 2px 0;">
+              <thead>
+                <tr style="border-bottom: 1.5px solid #000;">
+                  <th style="width: 14%; text-align: left; padding: 1.5px 0;">CT</th>
+                  <th style="width: 54%; text-align: left; padding: 1.5px 0;">DESCRIPCIÓN</th>
+                  <th style="width: 32%; text-align: right; padding-right: 1.5mm;">TOTAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="vertical-align: top;">
+                  <td style="width: 14%; text-align: left; padding: 1.5px 0;">1</td>
+                  <td style="width: 54%; text-align: left; padding: 1.5px 0; word-break: break-word;">PRODUCTO DE MUESTRA A</td>
+                  <td style="width: 32%; text-align: right; padding-right: 1.5mm; font-family: monospace;">$50.00</td>
+                </tr>
+                <tr style="vertical-align: top;">
+                  <td style="width: 14%; text-align: left; padding: 1.5px 0;">2</td>
+                  <td style="width: 54%; text-align: left; padding: 1.5px 0; word-break: break-word;">PRODUCTO DE MUESTRA B<br/><span style="font-size: 8px;">(2 x $25.00)</span></td>
+                  <td style="width: 32%; text-align: right; padding-right: 1.5mm; font-family: monospace;">$50.00</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="solid-sep"></div>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 900; margin: 3px 0;">
+              <span>TOTAL:</span>
+              <span style="padding-right: 1.5mm; font-family: monospace;">$100.00</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: ${detailSz}; font-weight: 800; margin: 1px 0;">
+              <span>RECIBIDO:</span><span style="padding-right: 1.5mm; font-family: monospace;">$100.00</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: ${detailSz}; font-weight: 800; margin: 1px 0;">
+              <span>CAMBIO:</span><span style="padding-right: 1.5mm; font-family: monospace;">$0.00</span>
+            </div>
+            <div class="dashed-sep"></div>
+            <p style="text-align: center; font-size: 10px; font-weight: 800; margin-top: 4px;">* GRACIAS POR SU COMPRA *</p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    if ((window as any).require && localSettings.ticketPrinterName) {
+      try {
+        const { ipcRenderer } = (window as any).require('electron');
+        await ipcRenderer.invoke('print-ticket-html', {
+          html: testHtml,
+          deviceName: localSettings.ticketPrinterName,
+          silent: true
+        });
+        setTestPrintFeedback(`✓ Ticket de prueba enviado a: ${localSettings.ticketPrinterName}`);
+      } catch (e) {
+        console.warn('Detalle al imprimir con electron:', e);
+        let iframe = document.getElementById('pos-test-print-iframe') as HTMLIFrameElement;
+        if (!iframe) {
+          iframe = document.createElement('iframe');
+          iframe.id = 'pos-test-print-iframe';
+          iframe.style.position = 'fixed';
+          iframe.style.right = '0';
+          iframe.style.bottom = '0';
+          iframe.style.width = '0';
+          iframe.style.height = '0';
+          iframe.style.border = '0';
+          document.body.appendChild(iframe);
+        }
+        const doc = iframe.contentWindow?.document || iframe.contentDocument;
+        if (doc) {
+          doc.open();
+          doc.write(testHtml);
+          doc.close();
+          setTimeout(() => { iframe.contentWindow?.print(); }, 250);
+        }
+        setTestPrintFeedback('✓ Diálogo de impresión abierto');
+      }
+    } else {
+      let iframe = document.getElementById('pos-test-print-iframe') as HTMLIFrameElement;
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = 'pos-test-print-iframe';
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
+      }
+      const doc = iframe.contentWindow?.document || iframe.contentDocument;
+      if (doc) {
+        doc.open();
+        doc.write(testHtml);
+        doc.close();
+        setTimeout(() => { iframe.contentWindow?.print(); }, 250);
+      }
+      setTestPrintFeedback('✓ Diálogo de impresión abierto');
+    }
+    setTimeout(() => setTestPrintFeedback(null), 3500);
+  };
+
+  const handleSavePrinterSettings = () => {
+    setSettings({
+      ticketPrinterName: localSettings.ticketPrinterName,
+      ticketFontFamily: localSettings.ticketFontFamily,
+      ticketFontSize: localSettings.ticketFontSize,
+      ticketTitleSize: localSettings.ticketTitleSize,
+      ticketWidth: localSettings.ticketWidth,
+      ticketShowLogo: localSettings.ticketShowLogo
+    });
+    alert(`✅ Configuración de Impresora y Ticket Guardada Exitosamente:
+
+• Impresora: ${localSettings.ticketPrinterName || 'Predeterminada de Windows'}
+• Rollo: ${localSettings.ticketWidth}
+• Tipografía: ${localSettings.ticketFontFamily}
+• Tamaño de Letra: ${localSettings.ticketFontSize}
+• Tamaño Título: ${localSettings.ticketTitleSize}`);
+  };
 
   const recentLogs = useLiveQuery(() => db.kardex.reverse().limit(15).toArray(), []) || [];
 
@@ -939,6 +1141,265 @@ export default function Config() {
               </div>
             </div>
           </div>
+
+          
+          {/* CONFIGURACIÓN DE IMPRESORA Y TICKET TÉRMICO */}
+          <div className="bg-nexus-900/30 border border-nexus-800 rounded-3xl p-6">
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h3 className="font-black text-white text-xl tracking-widest uppercase flex items-center gap-2">
+                  <Printer className="w-6 h-6 text-blue-400" />
+                  IMPRESORA Y TICKET TÉRMICO
+                </h3>
+                <p className="text-slate-400 text-xs">Personaliza la impresora física, tamaño de letra, tipografía y logo del ticket.</p>
+              </div>
+              <button
+                type="button"
+                onClick={fetchPrinters}
+                className="px-3 py-1.5 bg-nexus-800 hover:bg-nexus-700 text-slate-300 rounded-xl font-bold text-xs flex items-center gap-1.5 border border-nexus-700 transition-colors cursor-pointer"
+                title="Volver a buscar impresoras en Windows"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingPrinters ? 'animate-spin' : ''}`} />
+                <span>Actualizar Lista</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* COLUMNA DE CONTROLES */}
+              <div className="space-y-4">
+                {/* 1. SELECCIÓN DE IMPRESORA */}
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
+                    🖨️ IMPRESORA DE TICKETS EN WINDOWS:
+                  </label>
+                  <select
+                    value={localSettings.ticketPrinterName}
+                    onChange={e => setLocalSettings({ ...localSettings, ticketPrinterName: e.target.value })}
+                    className="w-full bg-[#0b1120] border border-nexus-700 text-white px-3 py-2.5 rounded-xl font-bold text-xs focus:border-blue-500 outline-none"
+                  >
+                    <option value="">-- Usar Diálogo / Predeterminada de Windows --</option>
+                    {printersList.map((p, idx) => (
+                      <option key={p.name || idx} value={p.name}>
+                        {p.name} {p.isDefault ? '(Predeterminada de Windows)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-slate-500 mt-1">Al seleccionar tu impresora aquí, se imprimirá directamente sin abrir ventanas extra.</p>
+                </div>
+
+                {/* 2. ANCHO DEL ROLLO */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
+                      📏 ANCHO DEL ROLLO:
+                    </label>
+                    <select
+                      value={localSettings.ticketWidth}
+                      onChange={e => setLocalSettings({ ...localSettings, ticketWidth: e.target.value as any })}
+                      className="w-full bg-[#0b1120] border border-nexus-700 text-white px-3 py-2.5 rounded-xl font-bold text-xs focus:border-blue-500 outline-none"
+                    >
+                      <option value="58mm">58 mm (Estándar Punto de Venta)</option>
+                      <option value="80mm">80 mm (Rollo Grande)</option>
+                    </select>
+                  </div>
+
+                  {/* 3. TIPO DE LETRA (TIPOGRAFÍA) */}
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
+                      🔤 TIPO DE LETRA:
+                    </label>
+                    <select
+                      value={localSettings.ticketFontFamily}
+                      onChange={e => setLocalSettings({ ...localSettings, ticketFontFamily: e.target.value as any })}
+                      className="w-full bg-[#0b1120] border border-nexus-700 text-white px-3 py-2.5 rounded-xl font-bold text-xs focus:border-blue-500 outline-none"
+                    >
+                      <option value="sans-serif">Arial / Sans-Serif (Moderna y Clara)</option>
+                      <option value="monospace">Monospace (Clásica Registradora)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* 4. TAMAÑO DE LETRAS */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
+                      🏷️ TAMAÑO NOMBRE TIENDA:
+                    </label>
+                    <select
+                      value={localSettings.ticketTitleSize}
+                      onChange={e => setLocalSettings({ ...localSettings, ticketTitleSize: e.target.value as any })}
+                      className="w-full bg-[#0b1120] border border-nexus-700 text-white px-3 py-2.5 rounded-xl font-bold text-xs focus:border-blue-500 outline-none"
+                    >
+                      <option value="sm">Chica (11px)</option>
+                      <option value="md">Mediana (13px - Recomendada)</option>
+                      <option value="lg">Grande (15px)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
+                      📝 TAMAÑO PRODUCTOS/TEXTO:
+                    </label>
+                    <select
+                      value={localSettings.ticketFontSize}
+                      onChange={e => setLocalSettings({ ...localSettings, ticketFontSize: e.target.value as any })}
+                      className="w-full bg-[#0b1120] border border-nexus-700 text-white px-3 py-2.5 rounded-xl font-bold text-xs focus:border-blue-500 outline-none"
+                    >
+                      <option value="sm">Chica (9.5px - Compacta)</option>
+                      <option value="md">Mediana (11px - Recomendada)</option>
+                      <option value="lg">Grande (12.5px - Extra Legible)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* 5. MOSTRAR LOGO */}
+                <div className="flex items-center justify-between p-3 bg-[#0b1120] border border-nexus-700 rounded-xl">
+                  <div>
+                    <span className="text-xs font-black text-white block">IMPRIMIR LOGOTIPO EN TICKET</span>
+                    <span className="text-[10px] text-slate-400">Si está marcado y tienes un logo subido, saldrá arriba del nombre.</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={localSettings.ticketShowLogo}
+                    onChange={e => setLocalSettings({ ...localSettings, ticketShowLogo: e.target.checked })}
+                    className="w-5 h-5 accent-blue-600 rounded cursor-pointer"
+                  />
+                </div>
+
+                {/* ACCIONES */}
+                <div className="pt-2 flex flex-col gap-2.5">
+                  <button
+                    type="button"
+                    onClick={handlePrintTestTicket}
+                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Printer className="w-4 h-4" /> IMPRIMIR TICKET DE PRUEBA
+                  </button>
+                  {testPrintFeedback && (
+                    <p className="text-center text-xs font-bold text-emerald-400 animate-pulse">{testPrintFeedback}</p>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleSavePrinterSettings}
+                    className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Save className="w-4 h-4" /> GUARDAR AJUSTES DE IMPRESORA
+                  </button>
+                </div>
+              </div>
+
+              {/* COLUMNA DE VISTA PREVIA EN VIVO */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 text-center">
+                  👁️ VISTA PREVIA EN TIEMPO REAL:
+                </label>
+                <div className="bg-slate-950 p-4 rounded-2xl border border-nexus-800 flex justify-center items-start overflow-hidden">
+                  <div
+                    className="bg-white p-3 text-black shadow-lg rounded"
+                    style={{
+                      width: localSettings.ticketWidth === '80mm' ? '280px' : '220px',
+                      fontFamily: localSettings.ticketFontFamily === 'monospace' ? 'monospace, "Courier New", Courier' : 'Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif',
+                      fontWeight: '800',
+                      wordBreak: 'break-word',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {localSettings.ticketShowLogo && localSettings.logo && (
+                      <img src={localSettings.logo} alt="Logo" className="max-h-[40px] max-w-[100px] mx-auto mb-1 object-contain grayscale" />
+                    )}
+                    <p
+                      className="font-black text-center uppercase leading-tight"
+                      style={{
+                        fontSize: localSettings.ticketTitleSize === 'sm' ? '11px' : localSettings.ticketTitleSize === 'lg' ? '15px' : '13px'
+                      }}
+                    >
+                      {localSettings.nombreNegocio || 'MI TIENDITA'}
+                    </p>
+                    <div
+                      className="text-center font-bold leading-tight my-1"
+                      style={{
+                        fontSize: localSettings.ticketFontSize === 'sm' ? '8.5px' : localSettings.ticketFontSize === 'lg' ? '11px' : '9.5px'
+                      }}
+                    >
+                      {localSettings.eslogan && <p className="italic">"{localSettings.eslogan}"</p>}
+                      <p className="mt-0.5">{localSettings.direccion || 'TUXTLA GUTIERREZ, CHIAPAS'}</p>
+                      {localSettings.telefono && <p>TEL: {localSettings.telefono}</p>}
+                      {localSettings.rfc && <p>RFC: {localSettings.rfc}</p>}
+                    </div>
+
+                    <div className="w-full my-1 border-t border-dashed border-black"></div>
+
+                    <div
+                      className="font-bold leading-tight my-1 space-y-0.5"
+                      style={{
+                        fontSize: localSettings.ticketFontSize === 'sm' ? '8.5px' : localSettings.ticketFontSize === 'lg' ? '11px' : '9.5px'
+                      }}
+                    >
+                      <p>FECHA: 21/11/2026, 17:00</p>
+                      <p>FOLIO: #PRUEBA-01</p>
+                      <p>CAJA: {(localSettings.cajaNombre || 'CAJA 1').toUpperCase()}</p>
+                      <p>CAJERO: {(localSettings.activeUser?.name || 'ADMINISTRADOR').toUpperCase()}</p>
+                    </div>
+
+                    <div className="w-full my-1 border-t border-dashed border-black"></div>
+
+                    <table
+                      className="w-full border-collapse my-1 font-bold"
+                      style={{
+                        fontSize: localSettings.ticketFontSize === 'sm' ? '9.5px' : localSettings.ticketFontSize === 'lg' ? '12.5px' : '11px',
+                        tableLayout: 'fixed'
+                      }}
+                    >
+                      <thead>
+                        <tr style={{ borderBottom: '1.5px solid #000' }}>
+                          <th style={{ width: '14%', textAlign: 'left', padding: '1px 0' }}>CT</th>
+                          <th style={{ width: '54%', textAlign: 'left', padding: '1px 0' }}>DESCRIPCIÓN</th>
+                          <th style={{ width: '32%', textAlign: 'right', paddingRight: '1mm' }}>TOTAL</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr style={{ verticalAlign: 'top' }}>
+                          <td style={{ width: '14%', textAlign: 'left', padding: '1px 0' }}>1</td>
+                          <td style={{ width: '54%', textAlign: 'left', padding: '1px 0', wordBreak: 'break-word' }}>SUERO ELECTROLIT</td>
+                          <td style={{ width: '32%', textAlign: 'right', paddingRight: '1mm', fontFamily: 'monospace' }}>$24.00</td>
+                        </tr>
+                        <tr style={{ verticalAlign: 'top' }}>
+                          <td style={{ width: '14%', textAlign: 'left', padding: '1px 0' }}>2</td>
+                          <td style={{ width: '54%', textAlign: 'left', padding: '1px 0', wordBreak: 'break-word' }}>
+                            CHICLE MAXI-AIR
+                            <span style={{ display: 'block', fontSize: '8px' }}>(2 x $1.00)</span>
+                          </td>
+                          <td style={{ width: '32%', textAlign: 'right', paddingRight: '1mm', fontFamily: 'monospace' }}>$2.00</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <div className="w-full my-1 border-t-2 border-solid border-black"></div>
+
+                    <div className="flex justify-between items-center font-black my-1 w-full" style={{ fontSize: '15px' }}>
+                      <span>TOTAL:</span>
+                      <span className="font-mono text-[16px] font-black" style={{ paddingRight: '1mm' }}>$26.00</span>
+                    </div>
+
+                    <div
+                      className="font-bold leading-tight my-1 space-y-0.5 w-full"
+                      style={{
+                        fontSize: localSettings.ticketFontSize === 'sm' ? '8.5px' : localSettings.ticketFontSize === 'lg' ? '11px' : '9.5px'
+                      }}
+                    >
+                      <div className="flex justify-between"><span>RECIBIDO:</span><span className="font-mono" style={{ paddingRight: '1mm' }}>$30.00</span></div>
+                      <div className="flex justify-between"><span>CAMBIO:</span><span className="font-mono" style={{ paddingRight: '1mm' }}>$4.00</span></div>
+                    </div>
+
+                    <div className="w-full my-1 border-t border-dashed border-black"></div>
+                    <p className="text-center font-bold mt-1 text-[9px] tracking-wider">* GRACIAS POR SU COMPRA *</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
 
           {/* INTEGRACIÓN DE TERMINALES (PAYMENT GATEWAYS) */}
           <div className="bg-nexus-900/30 border border-nexus-800 rounded-3xl p-6">

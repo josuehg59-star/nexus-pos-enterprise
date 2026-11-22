@@ -96,7 +96,7 @@ function formatTicketDate(dStr: any) {
 
 export default function PosTerminal() {
   const { isOnline } = useLiveSyncStore();
-  const { nombreNegocio, rfc, eslogan, telefono, direccion, mercadoPagoToken, mercadoPagoDeviceId, servidorIp, clipApiKey, clipSecretKey, clipSerialNumber, clipModo, logo, cajaNombre, activeUser, usersList, requirePasswordLogin, setSettings } = useSettings();
+  const { nombreNegocio, rfc, eslogan, telefono, direccion, mercadoPagoToken, mercadoPagoDeviceId, servidorIp, clipApiKey, clipSecretKey, clipSerialNumber, clipModo, logo, cajaNombre, activeUser, usersList, requirePasswordLogin, ticketFontFamily, ticketFontSize, ticketTitleSize, ticketWidth, ticketShowLogo, ticketPrinterName, setSettings } = useSettings();
   const searchInputRef = useRef<HTMLInputElement>(null);
   
   const { cart, total, addToCart, removeFromCart, updateQuantity, processSale, clearCart, restoreCart } = usePosStore();
@@ -742,6 +742,13 @@ export default function PosTerminal() {
   };
 
   
+  
+  const dynFontFamily = ticketFontFamily === 'monospace' ? 'monospace, "Courier New", Courier' : 'Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif';
+  const dynTitleSize = ticketTitleSize === 'sm' ? '11px' : ticketTitleSize === 'lg' ? '15px' : '13px';
+  const dynFontSize = ticketFontSize === 'sm' ? '9.5px' : ticketFontSize === 'lg' ? '12.5px' : '11px';
+  const dynDetailSize = ticketFontSize === 'sm' ? '8.5px' : ticketFontSize === 'lg' ? '11px' : '9.5px';
+  const dynPrintWidth = ticketWidth === '80mm' ? '72mm' : '48mm';
+
   const printTicket = () => {
     try {
       const el = document.getElementById('ticket-print');
@@ -791,11 +798,12 @@ export default function PosTerminal() {
           }
           #ticket-print {
             width: 100% !important;
-            max-width: 48mm !important;
+            max-width: ${dynPrintWidth} !important;
             margin: 0 auto !important;
             padding: 1mm 2mm 3mm 2mm !important;
             box-sizing: border-box !important;
-            font-size: 11px !important;
+            font-family: ${dynFontFamily} !important;
+            font-size: ${dynFontSize} !important;
             line-height: 1.25 !important;
             color: #000000 !important;
             font-weight: 800 !important;
@@ -822,6 +830,18 @@ export default function PosTerminal() {
           }
         </style>
       `;
+            if ((window as any).require && ticketPrinterName) {
+        try {
+          const { ipcRenderer } = (window as any).require('electron');
+          ipcRenderer.invoke('print-ticket-html', {
+            html: '<html><head><title>Ticket NEXUS POS</title>' + styles + printStyles + '</head><body style="margin:0; padding:0; background:white; width: 100%;">' + el.outerHTML + '</body></html>',
+            deviceName: ticketPrinterName,
+            silent: true
+          });
+          return;
+        } catch(_) {}
+      }
+
       doc.open();
       doc.write('<html><head><title>Ticket NEXUS POS</title>' + styles + printStyles + '</head><body style="margin:0; padding:0; background:white; width: 100%;">' + el.outerHTML + '</body></html>');
       doc.close();
@@ -1591,18 +1611,19 @@ export default function PosTerminal() {
             {/* TICKET TÉRMICO */}
             <div 
               id="ticket-print" 
-              className="bg-white p-3 font-sans text-black select-none mx-auto w-full max-w-[320px] shadow-sm rounded text-left" 
+              className="bg-white p-3 text-black select-none mx-auto w-full max-w-[320px] shadow-sm rounded text-left" 
               style={{ 
+                fontFamily: dynFontFamily,
                 color: "#000000", 
                 fontWeight: "800",
                 wordBreak: "break-word"
               }}
             >
               <div className="text-center mb-1">
-                {logo && <img src={logo} alt="Logo" className="max-h-[50px] max-w-[120px] mx-auto mb-1 object-contain grayscale" />}
-                <p className="font-black text-[13px] leading-tight text-black uppercase" style={{ wordBreak: "break-word" }}>{nombreNegocio}</p>
+                {ticketShowLogo !== false && logo && <img src={logo} alt="Logo" className="max-h-[50px] max-w-[120px] mx-auto mb-1 object-contain grayscale" />}
+                <p className="font-black leading-tight text-black uppercase" style={{ fontSize: dynTitleSize, wordBreak: "break-word" }}>{nombreNegocio}</p>
               </div>
-              <div className="text-center font-black leading-tight my-0.5 text-[9.5px]" style={{ wordBreak: "break-word" }}>
+              <div className="text-center font-black leading-tight my-0.5" style={{ fontSize: dynDetailSize, wordBreak: "break-word" }}>
                 {eslogan && <p className="italic font-bold">"{eslogan}"</p>}
                 <p className="mt-0.5 font-black">{direccion}</p>
                 {telefono && <p className="font-black">TEL: {telefono}</p>}
@@ -1611,7 +1632,7 @@ export default function PosTerminal() {
 
               <div className="w-full my-1 border-t border-dashed border-black"></div>
 
-              <div className="font-black text-black leading-tight space-y-0.5 my-1 text-[10px]">
+              <div className="font-black text-black leading-tight space-y-0.5 my-1" style={{ fontSize: dynDetailSize }}>
                 <p className="font-black">FECHA: {formatTicketDate(lastTicket.date)}</p>
                 <p className="font-black">FOLIO: #{lastTicket.folio}</p>
                 <p className="font-black">CAJA: {(lastTicket.caja || cajaNombre || 'CAJA 1 - PRINCIPAL').toUpperCase()}</p>
@@ -1622,7 +1643,7 @@ export default function PosTerminal() {
 
               <div className="w-full my-1 border-t border-dashed border-black"></div>
 
-              <table className="w-full border-collapse my-1 text-[11px] font-black" style={{ tableLayout: "fixed" }}>
+              <table className="w-full border-collapse my-1 font-black" style={{ fontSize: dynFontSize, tableLayout: "fixed" }}>
                 <thead>
                   <tr style={{ borderBottom: "1.5px solid #000" }}>
                     <th style={{ width: "14%", textAlign: "left", padding: "2px 0" }}>CT</th>

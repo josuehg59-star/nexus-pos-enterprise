@@ -81,7 +81,7 @@ const CartRow = React.memo(({ item, onUpdateQuantity, onRemove, onFocusSearch }:
 export default function PosTerminal() {
   const { isOnline, pendingOfflineCount } = useLiveSyncStore();
   const [showMobileCheckoutModal, setShowMobileCheckoutModal] = useState(false);
-  const { nombreNegocio, rfc, eslogan, telefono, direccion, mercadoPagoToken, mercadoPagoDeviceId, servidorIp, clipApiKey, clipSecretKey, clipSerialNumber, clipModo, logo, cajaNombre, activeUser, usersList, requirePasswordLogin, setSettings } = useSettings();
+  const { nombreNegocio, rfc, eslogan, telefono, direccion, mercadoPagoToken, mercadoPagoDeviceId, servidorIp, clipApiKey, clipSecretKey, clipSerialNumber, clipModo, logo, cajaNombre, activeUser, usersList, requirePasswordLogin, ticketFontFamily, ticketFontSize, ticketTitleSize, ticketWidth, ticketShowLogo, ticketPrinterName, setSettings } = useSettings();
   const searchInputRef = useRef<HTMLInputElement>(null);
   
   const { cart, total, addToCart, removeFromCart, updateQuantity, processSale, clearCart, restoreCart } = usePosStore();
@@ -687,6 +687,13 @@ export default function PosTerminal() {
   };
 
   
+  
+  const dynFontFamily = ticketFontFamily === 'monospace' ? 'monospace, "Courier New", Courier' : 'Arial, "Helvetica Neue", Helvetica, -apple-system, sans-serif';
+  const dynTitleSize = ticketTitleSize === 'sm' ? '11px' : ticketTitleSize === 'lg' ? '15px' : '13px';
+  const dynFontSize = ticketFontSize === 'sm' ? '9.5px' : ticketFontSize === 'lg' ? '12.5px' : '11px';
+  const dynDetailSize = ticketFontSize === 'sm' ? '8.5px' : ticketFontSize === 'lg' ? '11px' : '9.5px';
+  const dynPrintWidth = ticketWidth === '80mm' ? '72mm' : '48mm';
+
   const printTicket = () => {
     try {
       const el = document.getElementById('ticket-print');
@@ -715,8 +722,9 @@ export default function PosTerminal() {
         window.print();
         return;
       }
+            const printStyles = `<style>@page { margin: 0; size: auto; } @media print { body, html { margin: 0; padding: 0; width: 100%; } #ticket-print { width: 100% !important; max-width: ${dynPrintWidth} !important; margin: 0 auto !important; padding: 1mm 2mm 3mm 2mm !important; font-family: ${dynFontFamily} !important; font-size: ${dynFontSize} !important; box-sizing: border-box !important; border: none !important; box-shadow: none !important; } }</style>`;
       doc.open();
-      doc.write('<html><head><title>Ticket NEXUS POS</title>' + styles + '<style>@page { margin: 0; size: auto; } @media print { body, html { margin: 0; padding: 0; width: 100%; } #ticket-print { width: 100% !important; max-width: 48mm !important; margin: 0 auto !important; padding: 1mm 2mm 3mm 2mm !important; box-sizing: border-box !important; border: none !important; box-shadow: none !important; } }</style></head><body style="margin:0; padding:0; background:white; width: 100%;">' + el.outerHTML + '</body></html>');
+      doc.write('<html><head><title>Ticket NEXUS POS</title>' + styles + printStyles + '</head><body style="margin:0; padding:0; background:white; width: 100%;">' + el.outerHTML + '</body></html>');
       doc.close();
 
       setTimeout(() => {

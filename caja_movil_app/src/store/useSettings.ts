@@ -27,6 +27,12 @@ interface SettingsState {
   bancoDefault: string;
   requirePasswordLogin: boolean;
   preventNegativeStock: boolean;
+  ticketPrinterName: string;
+  ticketFontFamily: 'sans-serif' | 'monospace';
+  ticketFontSize: 'sm' | 'md' | 'lg';
+  ticketTitleSize: 'sm' | 'md' | 'lg';
+  ticketWidth: '58mm' | '80mm';
+  ticketShowLogo: boolean;
   activeUser: UserItem;
   usersList: UserItem[];
   setSettings: (settings: Partial<SettingsState>) => void;
@@ -72,6 +78,12 @@ export const useSettings = create<SettingsState>((set) => ({
   bancoDefault: localStorage.getItem('nexus_bancoDefault') || 'BBVA / BANCOMER',
   requirePasswordLogin: localStorage.getItem('nexus_requirePasswordLogin') === 'true',
   preventNegativeStock: localStorage.getItem('nexus_preventNegativeStock') !== 'false',
+  ticketPrinterName: localStorage.getItem('nexus_selected_printer') || '',
+  ticketFontFamily: ((localStorage.getItem('nexus_ticketFontFamily') as any) || 'sans-serif'),
+  ticketFontSize: ((localStorage.getItem('nexus_ticketFontSize') as any) || 'md'),
+  ticketTitleSize: ((localStorage.getItem('nexus_ticketTitleSize') as any) || 'md'),
+  ticketWidth: ((localStorage.getItem('nexus_ticketWidth') as any) || '58mm'),
+  ticketShowLogo: localStorage.getItem('nexus_ticketShowLogo') !== 'false',
   activeUser: savedActiveUser,
   usersList: savedUsers,
   setSettings: (settings) => {
@@ -97,6 +109,12 @@ export const useSettings = create<SettingsState>((set) => ({
     if (settings.bancoDefault !== undefined) localStorage.setItem('nexus_bancoDefault', settings.bancoDefault);
     if (settings.requirePasswordLogin !== undefined) localStorage.setItem('nexus_requirePasswordLogin', String(settings.requirePasswordLogin));
     if (settings.preventNegativeStock !== undefined) localStorage.setItem('nexus_preventNegativeStock', String(settings.preventNegativeStock));
+    if (settings.ticketPrinterName !== undefined) localStorage.setItem('nexus_selected_printer', settings.ticketPrinterName);
+    if (settings.ticketFontFamily !== undefined) localStorage.setItem('nexus_ticketFontFamily', settings.ticketFontFamily);
+    if (settings.ticketFontSize !== undefined) localStorage.setItem('nexus_ticketFontSize', settings.ticketFontSize);
+    if (settings.ticketTitleSize !== undefined) localStorage.setItem('nexus_ticketTitleSize', settings.ticketTitleSize);
+    if (settings.ticketWidth !== undefined) localStorage.setItem('nexus_ticketWidth', settings.ticketWidth);
+    if (settings.ticketShowLogo !== undefined) localStorage.setItem('nexus_ticketShowLogo', String(settings.ticketShowLogo));
     if (settings.activeUser !== undefined) localStorage.setItem('nexus_activeUser', JSON.stringify(settings.activeUser));
     if (settings.usersList !== undefined) localStorage.setItem('nexus_usersList', JSON.stringify(settings.usersList));
     set(settings);
