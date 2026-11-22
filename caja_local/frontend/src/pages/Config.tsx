@@ -332,6 +332,12 @@ function parseNum(val: any, defaultNum: number): number {
 
   const handleSavePrinterSettings = () => {
     setSettings({
+      nombreNegocio: localSettings.nombreNegocio,
+      rfc: localSettings.rfc,
+      eslogan: localSettings.eslogan,
+      direccion: localSettings.direccion,
+      telefono: localSettings.telefono,
+      email: localSettings.email,
       ticketPrinterName: localSettings.ticketPrinterName,
       ticketFontFamily: localSettings.ticketFontFamily,
       ticketFontWeight: localSettings.ticketFontWeight,
@@ -358,6 +364,24 @@ function parseNum(val: any, defaultNum: number): number {
 • Tamaño Datos Tienda: ${localSettings.ticketDetailSize}
 • Tamaño Productos: ${localSettings.ticketFontSize}
 • Tamaño Total/Cambio: ${localSettings.ticketTotalSize}`);
+  };
+
+  const handleSaveBusinessData = () => {
+    setSettings({
+      nombreNegocio: localSettings.nombreNegocio,
+      rfc: localSettings.rfc,
+      eslogan: localSettings.eslogan,
+      direccion: localSettings.direccion,
+      telefono: localSettings.telefono,
+      email: localSettings.email
+    });
+    alert(`✅ Datos del Negocio Guardados Exitosamente:
+
+• Nombre: ${localSettings.nombreNegocio || 'N/A'}
+• RFC: ${localSettings.rfc || 'N/A'}
+• Dirección: ${localSettings.direccion || 'N/A'}
+• Teléfono: ${localSettings.telefono || 'N/A'}
+• Slogan: ${localSettings.eslogan || 'N/A'}`);
   };
 
   const recentLogs = useLiveQuery(() => db.kardex.reverse().limit(15).toArray(), []) || [];
@@ -1094,20 +1118,44 @@ function parseNum(val: any, defaultNum: number): number {
             <div className="flex gap-8">
               <div className="flex-1 space-y-4">
                 <div>
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">NOMBRE COMERCIAL</label>
-                  <input type="text" value={localSettings.nombreNegocio} onChange={e=>setLocalSettings({...localSettings, nombreNegocio: e.target.value})} className="w-full bg-[#0b1120] border border-nexus-700 text-white px-4 py-3 rounded-xl font-bold outline-none" />
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">NOMBRE COMERCIAL (TÍTULO DE LA TIENDA)</label>
+                  <input type="text" value={localSettings.nombreNegocio || ''} onChange={e=>setLocalSettings({...localSettings, nombreNegocio: e.target.value})} placeholder="Ej. MI TIENDITA 'MISCELANEA BRIT'" className="w-full bg-[#0b1120] border border-nexus-700 text-white px-4 py-3 rounded-xl font-bold outline-none focus:border-blue-500" />
                 </div>
                 <div>
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">IDENTIFICACIÓN FISCAL / RFC</label>
-                  <input type="text" value={localSettings.rfc} onChange={e=>setLocalSettings({...localSettings, rfc: e.target.value})} className="w-full bg-[#0b1120] border border-nexus-700 text-white px-4 py-3 rounded-xl font-bold outline-none" />
+                  <input type="text" value={localSettings.rfc || ''} onChange={e=>setLocalSettings({...localSettings, rfc: e.target.value})} placeholder="Ej. MBOJ850401910" className="w-full bg-[#0b1120] border border-nexus-700 text-white px-4 py-3 rounded-xl font-bold outline-none focus:border-blue-500" />
                 </div>
                 <div>
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">SLOGAN / FRASE DEL TICKET</label>
-                  <input type="text" value={localSettings.eslogan} onChange={e=>setLocalSettings({...localSettings, eslogan: e.target.value})} className="w-full bg-[#0b1120] border border-nexus-700 text-white px-4 py-3 rounded-xl font-bold outline-none" />
+                  <input type="text" value={localSettings.eslogan || ''} onChange={e=>setLocalSettings({...localSettings, eslogan: e.target.value})} placeholder="Ej. TU TIENDA DE CONFIANZA" className="w-full bg-[#0b1120] border border-nexus-700 text-white px-4 py-3 rounded-xl font-bold outline-none focus:border-blue-500" />
                 </div>
-                
-                <div className="mt-4 inline-flex items-center gap-2 bg-emerald-900/20 border border-emerald-900/50 text-emerald-500 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full"></div> MODO ESCRITORIO ACTIVADO
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">DIRECCIÓN FÍSICA / UBICACIÓN (IMPRESA EN TICKET)</label>
+                  <input type="text" value={localSettings.direccion || ''} onChange={e=>setLocalSettings({...localSettings, direccion: e.target.value})} placeholder="Ej. AV. 16 DE SEPTIEMBRE 903, COL. BIENESTAR SOCIAL, TUXTLA GTZ" className="w-full bg-[#0b1120] border border-nexus-700 text-white px-4 py-3 rounded-xl font-bold outline-none focus:border-blue-500" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">TELÉFONO DE CONTACTO</label>
+                    <input type="text" value={localSettings.telefono || ''} onChange={e=>setLocalSettings({...localSettings, telefono: e.target.value})} placeholder="Ej. 9612709041" className="w-full bg-[#0b1120] border border-nexus-700 text-white px-4 py-3 rounded-xl font-bold outline-none focus:border-blue-500" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">CORREO ELECTRÓNICO (OPCIONAL)</label>
+                    <input type="email" value={localSettings.email || ''} onChange={e=>setLocalSettings({...localSettings, email: e.target.value})} placeholder="Ej. contacto@tienda.com" className="w-full bg-[#0b1120] border border-nexus-700 text-white px-4 py-3 rounded-xl font-bold outline-none focus:border-blue-500" />
+                  </div>
+                </div>
+
+                <div className="pt-2 flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={handleSaveBusinessData}
+                    className="py-3 px-6 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Save className="w-4 h-4" /> GUARDAR DATOS DEL NEGOCIO
+                  </button>
+
+                  <div className="inline-flex items-center gap-2 bg-emerald-900/20 border border-emerald-900/50 text-emerald-500 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div> MODO ESCRITORIO
+                  </div>
                 </div>
               </div>
 
