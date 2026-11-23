@@ -482,7 +482,10 @@ export async function buildTicketEscPos(
     const rec = data.recibido !== undefined ? Number(data.recibido) : Number(data.total);
     const cam = data.cambio !== undefined ? Number(data.cambio) : Math.max(0, rec - Number(data.total));
     builder.row('RECIBIDO:', `$ ${Number(rec).toFixed(2)}`);
+    // CAMBIO DESTACADO EN GRANDE Y EN NEGRITA
+    builder.font('A').size('double_h').bold(true);
     builder.row('CAMBIO:', `$ ${Number(cam).toFixed(2)}`);
+    builder.font('A').size('normal').bold(isBold);
   } else if (data.paymentMethod === 'MIXTO') {
     builder.align('center').bold(true).line('PAGO MIXTO').bold(isBold).align('left');
     const efec = Number(data.montoEfectivo || 0);
@@ -493,7 +496,10 @@ export async function buildTicketEscPos(
     const camMixto = Number((data as any).cambio || 0);
     if (recMixto > efec) {
       builder.row('EFEC. RECIBIDO:', `$ ${recMixto.toFixed(2)}`);
+      // CAMBIO DESTACADO EN GRANDE Y EN NEGRITA
+      builder.font('A').size('double_h').bold(true);
       builder.row('CAMBIO:', `$ ${camMixto.toFixed(2)}`);
+      builder.font('A').size('normal').bold(isBold);
     }
   }
 

@@ -9,7 +9,7 @@ import {
   X, Printer, List, ShieldCheck, Lock, UserCheck, SmartphoneNfc, Layers, FileSpreadsheet
 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { usePosStore, lineTotal } from '../store/useStore';
+import { usePosStore, lineTotal, lineSavings } from '../store/useStore';
 import { useSettings } from '../store/useSettings';
 import { useLiveSyncStore } from '../store/liveSyncEngine';
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
@@ -34,6 +34,16 @@ const CartRow = React.memo(({ item, onUpdateQuantity, onRemove, onFocusSearch }:
         <p className="text-[11px] font-bold text-slate-400 font-mono mt-0.5">
           ${item.price?.toFixed(2)} c/u
         </p>
+        {lineSavings(item) > 0 && (
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className="text-[9px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded font-mono">
+              🏷️ PROMO
+            </span>
+            <span className="text-[9px] font-mono font-bold text-amber-300">
+              Ahorraste: -${lineSavings(item).toFixed(2)}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
@@ -85,6 +95,10 @@ export default function PosTerminal() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   
   const { cart, total, addToCart, removeFromCart, updateQuantity, processSale, clearCart, restoreCart } = usePosStore();
+
+  const totalSavings = useMemo(() => {
+    return cart.reduce((sum, item) => sum + lineSavings(item), 0);
+  }, [cart]);
 
   const focusSearchInput = () => {
     setTimeout(() => {
@@ -1241,9 +1255,16 @@ function resolveTicketPx(val: any, defaultPx: number): string {
       {/* 4. CHECKOUT DOCK INFERIOR (SHRINK-0: FIJADO EXACTAMENTE AL FONDO DE LA PANTALLA DEL CELULAR) */}
       <div className="shrink-0 bg-nexus-900/98 border-t-2 border-emerald-500/40 p-3 shadow-[0_-10px_30px_rgba(0,0,0,0.6)] z-20 w-full">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-            {cart.reduce((sum, item) => sum + item.cartQty, 0)} {cart.reduce((sum, item) => sum + item.cartQty, 0) === 1 ? 'artículo' : 'artículos'}
-          </span>
+          <div>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+              {cart.reduce((sum, item) => sum + item.cartQty, 0)} {cart.reduce((sum, item) => sum + item.cartQty, 0) === 1 ? 'artículo' : 'artículos'}
+            </span>
+            {totalSavings > 0 && (
+              <span className="text-[10px] font-black text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full inline-block mt-0.5">
+                🎉 Ahorro: -${totalSavings.toFixed(2)}
+              </span>
+            )}
+          </div>
           <div className="text-right">
             <span className="text-[10px] text-slate-400 uppercase mr-1">Total:</span>
             <span className="text-2xl font-black text-emerald-400 font-mono tracking-tight">${total.toFixed(2)}</span>
@@ -1290,6 +1311,11 @@ function resolveTicketPx(val: any, defaultPx: number): string {
               <div className="text-center p-4 bg-[#070d18] rounded-2xl border border-nexus-800">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">TOTAL A COBRAR</span>
                 <span className="text-4xl font-black text-emerald-400 font-mono">${total.toFixed(2)}</span>
+                {totalSavings > 0 && (
+                  <div className="mt-2 text-xs font-black text-amber-300 bg-amber-500/10 border border-amber-500/30 py-1 px-3 rounded-xl inline-block">
+                    🎉 Ahorraste ${totalSavings.toFixed(2)} en promociones
+                  </div>
+                )}
               </div>
 
               {/* 1-TOQUE PAGO EXACTO EN EFECTIVO */}
@@ -1816,21 +1842,35 @@ function resolveTicketPx(val: any, defaultPx: number): string {
                 </div>
 
                 {lastTicket.paymentMethod === 'EFECTIVO' && (
-                  <div className="leading-tight my-1 space-y-0.5 w-full" style={{ fontSize: dynDetailSize, fontWeight: dynFontWeight }}>
-                    <div className="flex justify-between"><span>RECIBIDO:</span><span className="font-mono" style={{ paddingRight: "1.5mm" }}>${(lastTicket.recibido || lastTicket.total || 0).toFixed(2)}</span></div>
-                    <div className="flex justify-between"><span>CAMBIO:</span><span className="font-mono" style={{ paddingRight: "1.5mm" }}>${Math.max(0, (lastTicket.recibido || 0) - (lastTicket.total || 0)).toFixed(2)}</span></div>
+                  <div className="leading-tight my-1 space-y-1 w-full" style={{ fontSize: dynDetailSize, fontWeight: dynFontWeight }}>
+                    <div className="flex justify-between">
+                      <span>RECIBIDO:</span>
+                      <span className="font-mono" style={{ paddingRight: "1.5mm" }}>${(lastTicket.recibido || lastTicket.total || 0).toFixed(2)}</span>
+                    </div>
+                    {/* CAMBIO GIGANTE Y DESTACADO */}
+                    <div className="flex justify-between items-center py-1.5 px-1 border-t-2 border-b-2 border-black my-1" style={{ fontSize: "16px", fontWeight: "900" }}>
+                      <span style={{ fontSize: "15px", fontWeight: "900" }}>CAMBIO:</span>
+                      <span className="font-mono font-black" style={{ fontSize: "20px", fontWeight: "900", paddingRight: "1.5mm" }}>
+                        ${Math.max(0, (lastTicket.recibido || 0) - (lastTicket.total || 0)).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
                 )}
                 {lastTicket.paymentMethod === 'MIXTO' && (
-                  <div className="leading-tight my-1 space-y-0.5 w-full" style={{ fontSize: dynDetailSize, fontWeight: dynFontWeight }}>
+                  <div className="leading-tight my-1 space-y-1 w-full" style={{ fontSize: dynDetailSize, fontWeight: dynFontWeight }}>
                     <p className="text-center" style={{ fontWeight: "900" }}>FORMA DE PAGO: MIXTO</p>
                     <p>• EN EFECTIVO: ${(lastTicket.montoEfectivo || 0).toFixed(2)}</p>
                     <p>• {lastTicket.metodoMixtoSecundario || 'TARJETA'}: ${(lastTicket.montoTarjeta || lastTicket.montoTransferencia || ((lastTicket.total || 0) - (lastTicket.montoEfectivo || 0))).toFixed(2)}</p>
                     {lastTicket.recibido && lastTicket.recibido > (lastTicket.montoEfectivo || 0) && (
-                      <>
+                      <div className="pt-1 mt-1 border-t border-black">
                         <p>• EFECTIVO RECIBIDO: ${(lastTicket.recibido || 0).toFixed(2)}</p>
-                        <p>• CAMBIO ENTREGADO: ${(lastTicket.cambio || 0).toFixed(2)}</p>
-                      </>
+                        <div className="flex justify-between items-center py-1.5 px-1 border-t-2 border-b-2 border-black my-1" style={{ fontSize: "16px", fontWeight: "900" }}>
+                          <span style={{ fontSize: "14px", fontWeight: "900" }}>CAMBIO:</span>
+                          <span className="font-mono font-black" style={{ fontSize: "19px", fontWeight: "900", paddingRight: "1.5mm" }}>
+                            ${(lastTicket.cambio || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}

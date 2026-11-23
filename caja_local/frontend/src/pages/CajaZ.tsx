@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Calculator, DollarSign, CreditCard, Banknote, History, Printer, Lock, ShoppingBag, Calendar, ArrowLeft, CheckCircle2, Edit3, AlertCircle, Monitor } from 'lucide-react';
+import { Calculator, DollarSign, CreditCard, Banknote, History, Printer, Lock, ShoppingBag, Calendar, ArrowLeft, CheckCircle2, Edit3, AlertCircle, Monitor, Eye, EyeOff, Coins, X } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../store/database';
 import { useSettings } from '../store/useSettings';
@@ -68,6 +68,57 @@ export default function CajaZ() {
 
   // Estado: Efectivo Físico Contado en Cajón (Arqueo manual por el cajero/dueño)
   const [efectivoContadoInput, setEfectivoContadoInput] = useState<string>('');
+
+  // Modo Corte Ciego Empresarial (Auditoría limpia sin trampas: oculta el total esperado durante el conteo)
+  const [modoCorteCiego, setModoCorteCiego] = useState<boolean>(() => {
+    return localStorage.getItem('nexus_cajaz_corte_ciego') !== 'false';
+  });
+  const [corteRevelado, setCorteRevelado] = useState(false);
+  const [showDesgloseModal, setShowDesgloseModal] = useState(false);
+
+  const handleToggleCorteCiego = () => {
+    const nextVal = !modoCorteCiego;
+    setModoCorteCiego(nextVal);
+    localStorage.setItem('nexus_cajaz_corte_ciego', nextVal ? 'true' : 'false');
+  };
+
+  // Desglose de billetes y monedas para calculadora de arqueo
+  const [desglose, setDesglose] = useState<{ [key: string]: number }>({
+    b1000: 0,
+    b500: 0,
+    b200: 0,
+    b100: 0,
+    b50: 0,
+    b20: 0,
+    m20: 0,
+    m10: 0,
+    m5: 0,
+    m2: 0,
+    m1: 0,
+    m05: 0
+  });
+
+  const totalDesglose = useMemo(() => {
+    return (
+      (Number(desglose.b1000) || 0) * 1000 +
+      (Number(desglose.b500) || 0) * 500 +
+      (Number(desglose.b200) || 0) * 200 +
+      (Number(desglose.b100) || 0) * 100 +
+      (Number(desglose.b50) || 0) * 50 +
+      (Number(desglose.b20) || 0) * 20 +
+      (Number(desglose.m20) || 0) * 20 +
+      (Number(desglose.m10) || 0) * 10 +
+      (Number(desglose.m5) || 0) * 5 +
+      (Number(desglose.m2) || 0) * 2 +
+      (Number(desglose.m1) || 0) * 1 +
+      (Number(desglose.m05) || 0) * 0.5
+    );
+  }, [desglose]);
+
+  const handleAplicarDesglose = () => {
+    setEfectivoContadoInput(totalDesglose.toFixed(2));
+    setShowDesgloseModal(false);
+  };
 
   // Si se consulta un día pasado, buscar si ya existe un Corte Z cerrado para ese día
   const corteGuardadoDelDia = useMemo(() => {
@@ -418,6 +469,22 @@ export default function CajaZ() {
       alert(`No hay un turno abierto para ${selectedCaja}. Debes abrir caja primero.`);
       return;
     }
+
+    if (modoCorteCiego && !corteRevelado && efectivoFisicoVal === null) {
+      const confirmSinArqueo = confirm(
+        "⚠️ ATENCIÓN: El modo AUDITORÍA CIEGA está activo y aún no has ingresado el dinero físico contado en caja.\n\n¿Deseas ingresar el conteo primero usando la calculadora de billetes/monedas?"
+      );
+      if (confirmSinArqueo) {
+        setShowDesgloseModal(true);
+        return;
+      }
+    }
+
+    const confirmacion = confirm(`¿Estás seguro de realizar el CORTE Z definitivo para ${selectedCaja}?\nSe cerrará el turno actual y se generará el respaldo y ticket de corte.`);
+    if (!confirmacion) return;
+
+    setCorteRevelado(true);
+
     try {
       const backupData = { 
         caja: selectedCaja,
@@ -556,6 +623,121 @@ export default function CajaZ() {
         </div>
       )}
 
+      {showDesgloseModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b1120]/80 backdrop-blur-sm p-4">
+          <div className="bg-nexus-900 border border-nexus-700 w-full max-w-2xl p-6 rounded-3xl shadow-2xl space-y-6 animate-in fade-in zoom-in-95">
+            <div className="flex justify-between items-center border-b border-nexus-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-fuchsia-900/30 rounded-2xl border border-fuchsia-700/40">
+                  <Calculator className="w-6 h-6 text-fuchsia-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-white uppercase tracking-wider">Calculadora de Arqueo Físico</h3>
+                  <p className="text-xs text-slate-400 font-bold">Ingresa la cantidad de piezas por denominación para contar tu cajón</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowDesgloseModal(false)}
+                className="text-slate-400 hover:text-white font-black text-xl px-2 py-1 rounded-lg hover:bg-nexus-800"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[55vh] overflow-y-auto custom-scrollbar pr-1">
+              {/* BILLETES */}
+              <div className="space-y-3 bg-nexus-950/60 p-4 rounded-2xl border border-nexus-800">
+                <h4 className="text-xs font-black text-emerald-400 uppercase tracking-widest flex items-center gap-2 mb-3">
+                  <Banknote className="w-4 h-4" /> Billetes
+                </h4>
+                {[
+                  { key: 'b1000', label: '$1,000', val: 1000 },
+                  { key: 'b500', label: '$500', val: 500 },
+                  { key: 'b200', label: '$200', val: 200 },
+                  { key: 'b100', label: '$100', val: 100 },
+                  { key: 'b50', label: '$50', val: 50 },
+                  { key: 'b20', label: '$20', val: 20 },
+                ].map(b => (
+                  <div key={b.key} className="flex items-center justify-between gap-3 bg-nexus-900/80 p-2.5 rounded-xl border border-nexus-800">
+                    <span className="font-black text-white text-sm w-16">{b.label}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-500 font-bold">cant:</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={desglose[b.key] || ''}
+                        onChange={e => setDesglose(prev => ({ ...prev, [b.key]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                        className="w-20 bg-[#0b1120] border border-nexus-700 text-center text-white font-mono font-bold text-sm rounded-lg py-1 px-2 focus:outline-none focus:border-emerald-500"
+                        placeholder="0"
+                      />
+                    </div>
+                    <span className="font-mono font-black text-emerald-400 text-xs w-20 text-right">
+                      ${(((Number(desglose[b.key]) || 0) * b.val)).toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* MONEDAS */}
+              <div className="space-y-3 bg-nexus-950/60 p-4 rounded-2xl border border-nexus-800">
+                <h4 className="text-xs font-black text-cyan-400 uppercase tracking-widest flex items-center gap-2 mb-3">
+                  <Coins className="w-4 h-4" /> Monedas
+                </h4>
+                {[
+                  { key: 'm20', label: '$20', val: 20 },
+                  { key: 'm10', label: '$10', val: 10 },
+                  { key: 'm5', label: '$5', val: 5 },
+                  { key: 'm2', label: '$2', val: 2 },
+                  { key: 'm1', label: '$1', val: 1 },
+                  { key: 'm05', label: '$0.50', val: 0.5 },
+                ].map(m => (
+                  <div key={m.key} className="flex items-center justify-between gap-3 bg-nexus-900/80 p-2.5 rounded-xl border border-nexus-800">
+                    <span className="font-black text-white text-sm w-16">{m.label}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-500 font-bold">cant:</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={desglose[m.key] || ''}
+                        onChange={e => setDesglose(prev => ({ ...prev, [m.key]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                        className="w-20 bg-[#0b1120] border border-nexus-700 text-center text-white font-mono font-bold text-sm rounded-lg py-1 px-2 focus:outline-none focus:border-cyan-500"
+                        placeholder="0"
+                      />
+                    </div>
+                    <span className="font-mono font-black text-cyan-400 text-xs w-20 text-right">
+                      ${(((Number(desglose[m.key]) || 0) * m.val)).toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-nexus-950 p-4 rounded-2xl border border-nexus-800 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Total Arqueo Contado</span>
+                <span className="text-3xl font-mono font-black text-emerald-400">${totalDesglose.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setDesglose({ b1000: 0, b500: 0, b200: 0, b100: 0, b50: 0, b20: 0, m20: 0, m10: 0, m5: 0, m2: 0, m1: 0, m05: 0 })}
+                  className="px-4 py-3 bg-nexus-800 hover:bg-nexus-700 text-slate-300 font-bold text-xs rounded-xl border border-nexus-700 transition-colors"
+                >
+                  Limpiar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAplicarDesglose}
+                  className="flex-1 md:flex-initial px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" /> APLICAR AL ARQUEO (${totalDesglose.toFixed(2)})
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 flex flex-col h-full bg-[#0b1120] text-slate-200 overflow-hidden">
         {/* HEADER CON SELECTOR DE TERMINAL Y FECHA AUDITABLE */}
         <div className="h-24 flex items-center justify-between px-8 bg-nexus-900/50 backdrop-blur-md border-b border-nexus-800 shrink-0">
@@ -634,6 +816,22 @@ export default function CajaZ() {
                 />
               </div>
             </div>
+
+            {/* TOGGLE AUDITORÍA CIEGA */}
+            {isToday && !corteGuardadoDelDia && (
+              <button 
+                onClick={handleToggleCorteCiego} 
+                className={`px-3 py-2.5 rounded-xl font-black text-xs flex items-center gap-1.5 border transition-all ${
+                  modoCorteCiego 
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-md shadow-amber-500/10' 
+                    : 'bg-nexus-800 text-slate-400 border-nexus-700 hover:text-white'
+                }`}
+                title="Modo auditoría ciega: oculta el dinero esperado para que el cajero cuente sin trampas"
+              >
+                {modoCorteCiego ? <Lock className="w-3.5 h-3.5 text-amber-400" /> : <Eye className="w-3.5 h-3.5 text-blue-400" />}
+                <span>{modoCorteCiego ? 'AUDITORÍA CIEGA: ON' : 'AUDITORÍA: VISIBLE'}</span>
+              </button>
+            )}
 
             <button onClick={() => setShowHistory(true)} className="bg-nexus-800 hover:bg-nexus-700 text-slate-200 px-4 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 border border-nexus-700 transition-colors shadow-md">
               <History className="w-4 h-4 text-fuchsia-400" /> HISTORIAL DE CORTES
@@ -722,7 +920,13 @@ export default function CajaZ() {
                         <div className="p-3 bg-emerald-900/30 rounded-lg"><Banknote className="text-emerald-400 w-5 h-5" /></div>
                         <span className="font-bold text-slate-300">EFECTIVO</span>
                       </div>
-                      <span className="font-black text-xl text-emerald-400">${ventasEfectivo.toFixed(2)}</span>
+                      {modoCorteCiego && !corteRevelado && isToday && !corteGuardadoDelDia ? (
+                        <span className="text-xs font-black text-amber-400 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                          <Lock className="w-3.5 h-3.5" /> OCULTO (AUDITORÍA CIEGA)
+                        </span>
+                      ) : (
+                        <span className="font-black text-xl text-emerald-400">${ventasEfectivo.toFixed(2)}</span>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between p-4 bg-[#0b1120] rounded-xl border border-nexus-800">
@@ -744,7 +948,13 @@ export default function CajaZ() {
                   
                   <div className="mt-6 pt-6 border-t border-nexus-800 flex justify-between items-center">
                     <span className="text-lg font-black text-slate-400 tracking-widest">TOTAL DE VENTAS ({selectedCaja}):</span>
-                    <span className="text-3xl font-black text-white">${totalVentas.toFixed(2)}</span>
+                    {modoCorteCiego && !corteRevelado && isToday && !corteGuardadoDelDia ? (
+                      <span className="text-xs font-black text-amber-400 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5" /> OCULTO (AUDITORÍA CIEGA)
+                      </span>
+                    ) : (
+                      <span className="text-3xl font-black text-white">${totalVentas.toFixed(2)}</span>
+                    )}
                   </div>
                 </div>
 
@@ -891,7 +1101,13 @@ export default function CajaZ() {
                     <div>
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">Ventas en Efectivo (+)</label>
                       <div className="w-full bg-emerald-900/20 border border-emerald-900/50 text-emerald-400 px-4 py-3 rounded-xl font-black text-lg">
-                        $ {ventasEfectivo.toFixed(2)}
+                        {modoCorteCiego && !corteRevelado && isToday && !corteGuardadoDelDia ? (
+                          <span className="text-xs font-black text-amber-400 flex items-center gap-1.5">
+                            <Lock className="w-3.5 h-3.5" /> OCULTO EN AUDITORÍA CIEGA
+                          </span>
+                        ) : (
+                          `$ ${ventasEfectivo.toFixed(2)}`
+                        )}
                       </div>
                     </div>
 
@@ -933,7 +1149,13 @@ export default function CajaZ() {
                         EFECTIVO ESPERADO (SISTEMA)
                       </label>
                       <div className="w-full bg-nexus-950 border border-nexus-700 text-white px-4 py-3 rounded-xl font-mono font-black text-2xl text-center shadow-inner">
-                        $ {efectivoEsperado.toFixed(2)}
+                        {modoCorteCiego && !corteRevelado && isToday && !corteGuardadoDelDia ? (
+                          <span className="text-xs font-black text-amber-400 flex items-center justify-center gap-1.5 py-1">
+                            <Lock className="w-4 h-4" /> 🔒 OCULTO HASTA CONTAR CAJA
+                          </span>
+                        ) : (
+                          `$ ${efectivoEsperado.toFixed(2)}`
+                        )}
                       </div>
                     </div>
 
@@ -948,6 +1170,15 @@ export default function CajaZ() {
                             ARQUEO
                           </span>
                         </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setShowDesgloseModal(true)}
+                          className="w-full bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/40 text-indigo-300 py-2 px-3 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-colors shadow"
+                        >
+                          <Calculator className="w-4 h-4 text-indigo-400" /> 🧮 CALCULADORA DE BILLETES Y MONEDAS
+                        </button>
+
                         <div className="flex items-center">
                           <span className="bg-nexus-800 text-blue-400 px-4 py-3.5 rounded-l-xl font-bold border border-nexus-700 border-r-0 text-xl">$</span>
                           <input 
@@ -955,28 +1186,35 @@ export default function CajaZ() {
                             step="any"
                             value={efectivoContadoInput}
                             onChange={e => setEfectivoContadoInput(e.target.value)}
-                            placeholder={efectivoEsperado.toFixed(2)}
+                            placeholder={modoCorteCiego && !corteRevelado ? "Ingresa conteo..." : efectivoEsperado.toFixed(2)}
                             className="w-full bg-[#0b1120] border border-nexus-700 text-emerald-400 px-4 py-3.5 rounded-r-xl font-black text-2xl focus:outline-none focus:border-blue-500 transition-colors"
                           />
                         </div>
 
                         {/* DIFERENCIA EN TIEMPO REAL */}
-                        {diferenciaArqueo !== null && (
-                          <div className={`p-3 rounded-xl border text-center font-black text-xs flex items-center justify-center gap-2 ${
-                            Math.abs(diferenciaArqueo) < 0.01
-                              ? 'bg-emerald-950/70 border-emerald-800 text-emerald-400'
-                              : diferenciaArqueo > 0
-                                ? 'bg-cyan-950/70 border-cyan-800 text-cyan-300'
-                                : 'bg-rose-950/70 border-rose-800 text-rose-400'
-                          }`}>
-                            {Math.abs(diferenciaArqueo) < 0.01 ? (
-                              <span>✅ CAJA CUADRADA EXACTA ($0.00)</span>
-                            ) : diferenciaArqueo > 0 ? (
-                              <span>🟢 SOBRANTE EN CAJA: +${diferenciaArqueo.toFixed(2)}</span>
-                            ) : (
-                              <span>🔴 FALTANTE EN CAJA: -${Math.abs(diferenciaArqueo).toFixed(2)}</span>
-                            )}
+                        {modoCorteCiego && !corteRevelado && isToday && !corteGuardadoDelDia ? (
+                          <div className="p-3 rounded-xl border border-amber-900/50 bg-amber-950/40 text-center font-bold text-xs text-amber-300 flex items-center justify-center gap-2">
+                            <Lock className="w-4 h-4 text-amber-400" />
+                            <span>La diferencia y cuadratura se revelarán al realizar el Corte Z.</span>
                           </div>
+                        ) : (
+                          diferenciaArqueo !== null && (
+                            <div className={`p-3 rounded-xl border text-center font-black text-xs flex items-center justify-center gap-2 ${
+                              Math.abs(diferenciaArqueo) < 0.01
+                                ? 'bg-emerald-950/70 border-emerald-800 text-emerald-400'
+                                : diferenciaArqueo > 0
+                                  ? 'bg-cyan-950/70 border-cyan-800 text-cyan-300'
+                                  : 'bg-rose-950/70 border-rose-800 text-rose-400'
+                            }`}>
+                              {Math.abs(diferenciaArqueo) < 0.01 ? (
+                                <span>✅ CAJA CUADRADA EXACTA ($0.00)</span>
+                              ) : diferenciaArqueo > 0 ? (
+                                <span>🟢 SOBRANTE EN CAJA: +${diferenciaArqueo.toFixed(2)}</span>
+                              ) : (
+                                <span>🔴 FALTANTE EN CAJA: -${Math.abs(diferenciaArqueo).toFixed(2)}</span>
+                              )}
+                            </div>
+                          )
                         )}
                       </div>
                     )}

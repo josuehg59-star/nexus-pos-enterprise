@@ -9,9 +9,26 @@ export interface CartItem extends Product {
   cartQty: number;
 }
 
-/** Total de una línea del carrito aplicando la promoción del producto (si existe). */
-export function lineTotal(item: { price: number; cartQty: number; promo_qty?: number; promo_price?: number }): number {
+/** Total de una línea del carrito aplicando la promoción o combo del producto (si existe). */
+export function lineTotal(item: { price: number; cartQty: number; promo_qty?: number; promo_price?: number; promo_tipo?: string }): number {
   const { price, cartQty, promo_qty, promo_price } = item;
+  const promoTipo = (item.promo_tipo || (item as any).promo_type || '').toUpperCase();
+
+  // 1. Promoción 2x1 (Lleva 2 y paga 1)
+  if (promoTipo === '2X1') {
+    const pares = Math.floor(cartQty / 2);
+    const resto = cartQty % 2;
+    return (pares + resto) * price;
+  }
+
+  // 2. Promoción 3x2 (Lleva 3 y paga 2)
+  if (promoTipo === '3X2') {
+    const trios = Math.floor(cartQty / 3);
+    const resto = cartQty % 3;
+    return (trios * 2 + resto) * price;
+  }
+
+  // 3. Paquetes o Mayoreo por volumen
   if (promo_qty && promo_qty > 0 && promo_price && promo_price > 0 && cartQty >= promo_qty) {
     if (promo_price >= price) {
       // Paquete: cada `promo_qty` piezas cuestan `promo_price` en total
@@ -21,7 +38,15 @@ export function lineTotal(item: { price: number; cartQty: number; promo_qty?: nu
     // Precio unitario de mayoreo al llegar a `promo_qty` piezas
     return promo_price * cartQty;
   }
+
   return price * cartQty;
+}
+
+/** Calcula el ahorro en pesos de una línea gracias a la promoción/mayoreo. */
+export function lineSavings(item: any): number {
+  const regularTotal = (Number(item.price) || 0) * (Number(item.cartQty) || 0);
+  const promoTotal = lineTotal(item);
+  return Math.max(0, regularTotal - promoTotal);
 }
 
 /** Obtiene el prefijo de terminal para folios (C1, C2, C3, MOV...) */

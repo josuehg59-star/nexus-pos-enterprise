@@ -7,10 +7,10 @@ import {
   ClipboardList, Search, User, Wallet,
   CreditCard, Banknote, Smartphone, PauseCircle,
   CheckCircle2, Bolt, Droplet, ArrowDownToLine, ShoppingCart, Wifi,
-  X, Printer, List, ShieldCheck, Lock, UserCheck, SmartphoneNfc, Layers, Unlock, FileSpreadsheet
+  X, Printer, List, ShieldCheck, Lock, UserCheck, SmartphoneNfc, Layers, Unlock, FileSpreadsheet, Plus, Tag, Percent
 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { usePosStore, lineTotal } from '../store/useStore';
+import { usePosStore, lineTotal, lineSavings } from '../store/useStore';
 import { useSettings } from '../store/useSettings';
 import { buildTicketEscPos, openCashDrawer } from '../utils/escposHelper';
 import { useLiveSyncStore } from '../store/liveSyncEngine';
@@ -71,6 +71,16 @@ const CartRow = React.memo(({ item, onUpdateQuantity, onRemove, onFocusSearch }:
       <div className="flex-1">
         <h3 className="font-bold text-white text-lg">{item.name}</h3>
         <p className="text-sm font-bold text-slate-500 font-mono">{item.sku} • ${item.price.toFixed(2)} c/u</p>
+        {lineSavings(item) > 0 && (
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full inline-flex items-center gap-1 font-mono">
+              🏷️ PROMO ACTIVADA
+            </span>
+            <span className="text-[10px] font-mono font-bold text-amber-300">
+              Ahorraste: -${lineSavings(item).toFixed(2)}
+            </span>
+          </div>
+        )}
       </div>
       <div className="text-right mr-4">
         <p className="font-black text-white text-2xl">${lineTotal(item).toFixed(2)}</p>
@@ -124,6 +134,33 @@ export default function PosTerminal() {
   const [showUserModal, setShowUserModal] = useState(false);
   const [selectedUserToSwitch, setSelectedUserToSwitch] = useState<any>(null);
   const [userPinInput, setUserPinInput] = useState('');
+
+  // Pestañas de Venta Simultáneas (Multi-Ticket Tabs con Crash Recovery)
+  interface PosTab {
+    id: string;
+    name: string;
+    cart: any[];
+    client: { name: string; monedero: number; id?: number };
+    paymentMethod: string;
+    montoRecibido: string;
+  }
+
+  const [tabs, setTabs] = useState<PosTab[]>(() => {
+    try {
+      const saved = localStorage.getItem('nexus_pos_active_tabs');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch(e) {}
+    return [
+      { id: 'tab-1', name: 'Cuenta 1', cart: [], client: { name: 'PUBLICO GENERAL', monedero: 0, id: 0 }, paymentMethod: 'EFECTIVO', montoRecibido: '' }
+    ];
+  });
+
+  const [activeTabId, setActiveTabId] = useState<string>(() => {
+    return localStorage.getItem('nexus_pos_active_tab_id') || 'tab-1';
+  });
 
   
   
@@ -297,6 +334,136 @@ export default function PosTerminal() {
   const PORCENTAJE_MONEDERO = 0.01;
   const abonoMonedero = total * PORCENTAJE_MONEDERO;
   const cambio = (parseFloat(montoRecibido) || 0) - total;
+  const totalAhorroPromociones = useMemo(() => {
+    return cart.reduce((sum, item) => sum + lineSavings(item), 0);
+  }, [cart]);
+
+  // Restaurar carrito de la pestaña activa al iniciar la app (Crash Recovery)
+  useEffect(() => {
+    const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0];
+    if (activeTab && activeTab.cart && activeTab.cart.length > 0) {
+      usePosStore.getState().restoreCart(activeTab.cart, 0);
+      setClient(activeTab.client || { name: 'PUBLICO GENERAL', monedero: 0, id: 0 });
+      setPaymentMethod(activeTab.paymentMethod || 'EFECTIVO');
+      setMontoRecibido(activeTab.montoRecibido || '');
+    }
+  }, []);
+
+  // Sincronizar en caliente los cambios de la pestaña activa (Persistencia Continua / Crash Recovery)
+  useEffect(() => {
+    setTabs(prev => {
+      const updated = prev.map(t => {
+        if (t.id === activeTabId) {
+          return {
+            ...t,
+            cart: [...cart],
+            client: { ...client },
+            paymentMethod,
+            montoRecibido
+          };
+        }
+        return t;
+      });
+      try {
+        localStorage.setItem('nexus_pos_active_tabs', JSON.stringify(updated));
+        localStorage.setItem('nexus_pos_active_tab_id', activeTabId);
+      } catch(e) {}
+      return updated;
+    });
+  }, [cart, client, paymentMethod, montoRecibido, activeTabId]);
+
+  const switchTab = (targetTabId: string) => {
+    if (targetTabId === activeTabId) return;
+    const targetTab = tabs.find(t => t.id === targetTabId);
+    if (!targetTab) return;
+
+    usePosStore.getState().restoreCart(targetTab.cart || [], 0);
+    setClient(targetTab.client || { name: 'PUBLICO GENERAL', monedero: 0, id: 0 });
+    setPaymentMethod(targetTab.paymentMethod || 'EFECTIVO');
+    setMontoRecibido(targetTab.montoRecibido || '');
+    setActiveTabId(targetTabId);
+    try {
+      localStorage.setItem('nexus_pos_active_tab_id', targetTabId);
+    } catch(e) {}
+    focusSearchInput();
+  };
+
+  const addNewTab = () => {
+    const nextNum = tabs.length + 1;
+    const newId = 'tab-' + Date.now();
+    const newTab: PosTab = {
+      id: newId,
+      name: `Cuenta ${nextNum}`,
+      cart: [],
+      client: { name: 'PUBLICO GENERAL', monedero: 0, id: 0 },
+      paymentMethod: 'EFECTIVO',
+      montoRecibido: ''
+    };
+    const updatedTabs = [...tabs, newTab];
+    setTabs(updatedTabs);
+    usePosStore.getState().clearCart();
+    setClient({ name: 'PUBLICO GENERAL', monedero: 0, id: 0 });
+    setPaymentMethod('EFECTIVO');
+    setMontoRecibido('');
+    setActiveTabId(newId);
+    try {
+      localStorage.setItem('nexus_pos_active_tabs', JSON.stringify(updatedTabs));
+      localStorage.setItem('nexus_pos_active_tab_id', newId);
+    } catch(e) {}
+    focusSearchInput();
+  };
+
+  const closeTab = (tabId: string) => {
+    const tabToClose = tabs.find(t => t.id === tabId);
+    if (!tabToClose) return;
+
+    if (tabToClose.cart && tabToClose.cart.length > 0) {
+      if (!window.confirm(`La ${tabToClose.name} tiene ${tabToClose.cart.length} productos en el carrito. ¿Deseas cerrarla y descartar estos productos?`)) {
+        return;
+      }
+    }
+
+    const remaining = tabs.filter(t => t.id !== tabId);
+    if (remaining.length === 0) {
+      const defaultTab: PosTab = {
+        id: 'tab-' + Date.now(),
+        name: 'Cuenta 1',
+        cart: [],
+        client: { name: 'PUBLICO GENERAL', monedero: 0, id: 0 },
+        paymentMethod: 'EFECTIVO',
+        montoRecibido: ''
+      };
+      setTabs([defaultTab]);
+      setActiveTabId(defaultTab.id);
+      usePosStore.getState().clearCart();
+      setClient({ name: 'PUBLICO GENERAL', monedero: 0, id: 0 });
+      setPaymentMethod('EFECTIVO');
+      setMontoRecibido('');
+      try {
+        localStorage.setItem('nexus_pos_active_tabs', JSON.stringify([defaultTab]));
+        localStorage.setItem('nexus_pos_active_tab_id', defaultTab.id);
+      } catch(e) {}
+      return;
+    }
+
+    setTabs(remaining);
+    if (activeTabId === tabId) {
+      const nextTab = remaining[remaining.length - 1];
+      setActiveTabId(nextTab.id);
+      usePosStore.getState().restoreCart(nextTab.cart || [], 0);
+      setClient(nextTab.client || { name: 'PUBLICO GENERAL', monedero: 0, id: 0 });
+      setPaymentMethod(nextTab.paymentMethod || 'EFECTIVO');
+      setMontoRecibido(nextTab.montoRecibido || '');
+      try {
+        localStorage.setItem('nexus_pos_active_tabs', JSON.stringify(remaining));
+        localStorage.setItem('nexus_pos_active_tab_id', nextTab.id);
+      } catch(e) {}
+    } else {
+      try {
+        localStorage.setItem('nexus_pos_active_tabs', JSON.stringify(remaining));
+      } catch(e) {}
+    }
+  };
 
   // Live Search ultrarrápido en memoria (< 0.2ms) con debounce para no saturar con escáneres
   useEffect(() => {
@@ -660,13 +827,14 @@ export default function PosTerminal() {
       alert("El carrito está vacío");
       return;
     }
-    setIsProcessing(false);
+    // Disparo inmediato al instante del cajón RJ11 (0.01s)
+    openCashDrawer(ticketPrinterName);
+
     const { processSale, lastError } = usePosStore.getState();
     const ticket = await processSale('EFECTIVO', client.name || 'PUBLICO GENERAL', amount);
     if (ticket) {
       setLastTicket(ticket);
       setShowTicketModal(true);
-      openCashDrawer(ticketPrinterName);
       setMontoRecibido('');
       setPaymentMethod('EFECTIVO');
       setClient({ name: 'PUBLICO GENERAL', monedero: 0, id: 0 });
@@ -704,7 +872,6 @@ export default function PosTerminal() {
     }
 
     // TARJETA, TRANSFERENCIA, CRÉDITO, MONEDERO: Cobro directo por el total exacto
-    setIsProcessing(false);
     const { processSale, lastError } = usePosStore.getState();
     const ticket = await processSale(method, client.name || 'PUBLICO GENERAL', total);
     if (ticket) {
@@ -783,7 +950,10 @@ export default function PosTerminal() {
       }
     }
 
-    setIsProcessing(false);
+    if (efecMonto > 0) {
+      openCashDrawer(ticketPrinterName);
+    }
+
     const { processSale, lastError } = usePosStore.getState();
     const ticket = await processSale('MIXTO', client.name || 'PUBLICO GENERAL', efecRecibido, {
       efectivo: efecMonto,
@@ -816,6 +986,11 @@ export default function PosTerminal() {
       alert('El monto recibido ($' + (parseFloat(montoRecibido) || 0).toFixed(2) + ') es menor al total ($' + total.toFixed(2) + ').');
       setIsProcessing(false);
       return;
+    }
+
+    // Disparo inmediato del cajón al instante sin demoras
+    if (methodToUse === 'EFECTIVO') {
+      openCashDrawer(ticketPrinterName);
     }
 
     const { processSale, lastError } = usePosStore.getState();
@@ -1239,6 +1414,9 @@ function resolveTicketPx(val: any, defaultPx: number): string {
       // F12: Cobro tradicional o confirmación
       if (e.key === 'F12') {
         e.preventDefault();
+        if (paymentMethod === 'EFECTIVO' && cart.length > 0 && total > 0) {
+          openCashDrawer(ticketPrinterName);
+        }
         if (isProcessing) {
           finalizeSaleWithMethod(paymentMethod);
         } else {
@@ -1267,11 +1445,39 @@ function resolveTicketPx(val: any, defaultPx: number): string {
         }
       }
 
-      // F2 o P: Imprimir ticket cuando el modal está abierto
+      // F2 o P: Imprimir ticket cuando el modal está abierto, o F2 para nueva cuenta
       if (e.key === 'p' || e.key === 'P' || e.key === 'F2') {
         if (showTicketModal) {
           e.preventDefault();
           printTicket();
+          return;
+        } else if (e.key === 'F2') {
+          e.preventDefault();
+          addNewTab();
+          return;
+        }
+      }
+
+      // Ctrl + T: Nueva Pestaña / Cuenta
+      if (e.ctrlKey && (e.key === 't' || e.key === 'T')) {
+        e.preventDefault();
+        addNewTab();
+        return;
+      }
+
+      // Ctrl + W: Cerrar Pestaña / Cuenta activa
+      if (e.ctrlKey && (e.key === 'w' || e.key === 'W')) {
+        e.preventDefault();
+        closeTab(activeTabId);
+        return;
+      }
+
+      // Ctrl + 1..9: Cambiar de pestaña instantáneamente
+      if (e.ctrlKey && ['1','2','3','4','5','6','7','8','9'].includes(e.key)) {
+        const tabIdx = parseInt(e.key, 10) - 1;
+        if (tabs[tabIdx]) {
+          e.preventDefault();
+          switchTab(tabs[tabIdx].id);
           return;
         }
       }
@@ -1311,7 +1517,7 @@ function resolveTicketPx(val: any, defaultPx: number): string {
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [cart, total, paymentMethod, client.name, showTicketModal, isProcessing, showMixtoModal, showClientModal, showPausedModal, showNegadoModal, showAdicionalModal, montoRecibido, ticketPrinterName]);
+  }, [cart, total, paymentMethod, client.name, showTicketModal, isProcessing, showMixtoModal, showClientModal, showPausedModal, showNegadoModal, showAdicionalModal, montoRecibido, ticketPrinterName, tabs, activeTabId]);
 
   const handleCloseTicketModal = () => {
     setShowTicketModal(false);
@@ -1462,8 +1668,61 @@ function resolveTicketPx(val: any, defaultPx: number): string {
 
       <div className="flex-1 flex overflow-hidden">
         
-        {/* IZQUIERDA: Ticket y Acciones */}
-        <div className="flex-1 flex flex-col relative">
+        {/* IZQUIERDA: Pestañas Multi-Ticket y Carrito */}
+        <div className="flex-1 flex flex-col relative overflow-hidden">
+          
+          {/* BARRA DE PESTAÑAS MULTI-CUENTA (ESTILO NAVEGADOR ENTERPRISE) */}
+          <div className="bg-nexus-950 border-b border-nexus-800 px-3 pt-2 flex items-center gap-1.5 shrink-0 overflow-x-auto">
+            {tabs.map((tab, idx) => {
+              const tabTotal = (tab.id === activeTabId ? cart : (tab.cart || [])).reduce((sum: number, it: any) => sum + lineTotal(it), 0);
+              const tabQty = (tab.id === activeTabId ? cart : (tab.cart || [])).reduce((sum: number, it: any) => sum + (it.cartQty || 1), 0);
+              const isActive = tab.id === activeTabId;
+
+              return (
+                <div
+                  key={tab.id}
+                  onClick={() => switchTab(tab.id)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-t-xl text-xs font-black cursor-pointer select-none transition-all border-t border-x ${
+                    isActive 
+                      ? 'bg-nexus-900 text-white border-nexus-700 shadow-md ring-1 ring-emerald-500/40' 
+                      : 'bg-nexus-950/70 hover:bg-nexus-900/60 text-slate-400 border-nexus-800/80 hover:text-slate-200'
+                  }`}
+                >
+                  <span className={`text-[10px] font-mono font-bold ${isActive ? 'text-emerald-400' : 'text-slate-500'}`}>
+                    #{idx + 1}
+                  </span>
+                  <span>{tab.name || `Cuenta ${idx + 1}`}</span>
+                  {tabTotal > 0 && (
+                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.2 rounded-md font-mono text-[10px] font-bold">
+                      ${tabTotal.toFixed(2)} ({tabQty})
+                    </span>
+                  )}
+                  {tabs.length > 1 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        closeTab(tab.id);
+                      }}
+                      className="text-slate-500 hover:text-rose-400 hover:bg-rose-500/20 p-0.5 rounded transition-colors ml-1"
+                      title="Cerrar cuenta"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+
+            <button
+              onClick={addNewTab}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-black text-slate-400 hover:text-emerald-300 bg-nexus-950 hover:bg-nexus-900 border-t border-x border-nexus-800 transition-all cursor-pointer"
+              title="Abrir nueva cuenta simultánea (F2 o Ctrl+T)"
+            >
+              <Plus className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-[10px] uppercase tracking-wider">NUEVA CUENTA (F2)</span>
+            </button>
+          </div>
+
           <div className="flex-1 p-6 overflow-y-auto custom-scrollbar bg-slate-900/50">
             {cart.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center opacity-30">
@@ -1488,6 +1747,7 @@ function resolveTicketPx(val: any, defaultPx: number): string {
 
           <div className="h-12 bg-nexus-900 border-t border-nexus-800 shrink-0 flex items-center px-4 gap-3 text-[10px] font-black text-slate-400 tracking-wider overflow-x-auto">
             <span className="bg-nexus-800 px-2 py-1 rounded text-white border border-nexus-700">F1 Buscar</span>
+            <span className="bg-blue-600/20 text-blue-300 px-2 py-1 rounded border border-blue-500/30 font-bold">F2 / Ctrl+T Cuenta</span>
             <span className="text-amber-400 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">F4 Negado</span>
             <div className="w-px h-4 bg-nexus-700"></div>
             <span className="text-emerald-400 font-black bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">ESPACIO / F5 Exacto</span>
@@ -1512,6 +1772,13 @@ function resolveTicketPx(val: any, defaultPx: number): string {
               <p className="text-[10px] text-fuchsia-400 font-bold mt-2 bg-fuchsia-500/10 inline-block px-3 py-1 rounded-full border border-fuchsia-500/20">
                 + ${(abonoMonedero).toFixed(2)} acumulables a monedero
               </p>
+            )}
+            {totalAhorroPromociones > 0 && (
+              <div>
+                <p className="text-[11px] text-amber-300 font-bold mt-2 bg-amber-500/15 inline-block px-3 py-1 rounded-full border border-amber-500/30 font-mono">
+                  🎉 Ahorraste ${totalAhorroPromociones.toFixed(2)} en promociones
+                </p>
+              </div>
             )}
           </div>
 
@@ -2166,21 +2433,35 @@ function resolveTicketPx(val: any, defaultPx: number): string {
                 </div>
 
                 {lastTicket.paymentMethod === 'EFECTIVO' && (
-                  <div className="leading-tight my-1 space-y-0.5 w-full" style={{ fontSize: dynDetailSize, fontWeight: dynFontWeight }}>
-                    <div className="flex justify-between"><span>RECIBIDO:</span><span className="font-mono" style={{ paddingRight: "1mm" }}>${(lastTicket.recibido || lastTicket.total || 0).toFixed(2)}</span></div>
-                    <div className="flex justify-between"><span>CAMBIO:</span><span className="font-mono" style={{ paddingRight: "1mm" }}>${Math.max(0, (lastTicket.recibido || 0) - (lastTicket.total || 0)).toFixed(2)}</span></div>
+                  <div className="leading-tight my-1 space-y-1 w-full" style={{ fontSize: dynDetailSize, fontWeight: dynFontWeight }}>
+                    <div className="flex justify-between">
+                      <span>RECIBIDO:</span>
+                      <span className="font-mono" style={{ paddingRight: "1mm" }}>${(lastTicket.recibido || lastTicket.total || 0).toFixed(2)}</span>
+                    </div>
+                    {/* CAMBIO GIGANTE Y DESTACADO */}
+                    <div className="flex justify-between items-center py-1.5 px-1 border-t-2 border-b-2 border-black my-1" style={{ fontSize: "16px", fontWeight: "900" }}>
+                      <span style={{ fontSize: "15px", fontWeight: "900" }}>CAMBIO:</span>
+                      <span className="font-mono font-black" style={{ fontSize: "20px", fontWeight: "900", paddingRight: "1mm" }}>
+                        ${Math.max(0, (lastTicket.recibido || 0) - (lastTicket.total || 0)).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
                 )}
                 {lastTicket.paymentMethod === 'MIXTO' && (
-                  <div className="leading-tight my-1 space-y-0.5 w-full" style={{ fontSize: dynDetailSize, fontWeight: dynFontWeight }}>
+                  <div className="leading-tight my-1 space-y-1 w-full" style={{ fontSize: dynDetailSize, fontWeight: dynFontWeight }}>
                     <p className="text-center" style={{ fontWeight: "900" }}>FORMA DE PAGO: MIXTO</p>
                     <p>• EN EFECTIVO: ${(lastTicket.montoEfectivo || 0).toFixed(2)}</p>
                     <p>• {lastTicket.metodoMixtoSecundario || 'TARJETA'}: ${(lastTicket.montoTarjeta || lastTicket.montoTransferencia || ((lastTicket.total || 0) - (lastTicket.montoEfectivo || 0))).toFixed(2)}</p>
                     {lastTicket.recibido && lastTicket.recibido > (lastTicket.montoEfectivo || 0) && (
-                      <>
+                      <div className="pt-1 mt-1 border-t border-black">
                         <p>• EFECTIVO RECIBIDO: ${(lastTicket.recibido || 0).toFixed(2)}</p>
-                        <p>• CAMBIO ENTREGADO: ${(lastTicket.cambio || 0).toFixed(2)}</p>
-                      </>
+                        <div className="flex justify-between items-center py-1.5 px-1 border-t-2 border-b-2 border-black my-1" style={{ fontSize: "16px", fontWeight: "900" }}>
+                          <span style={{ fontSize: "14px", fontWeight: "900" }}>CAMBIO:</span>
+                          <span className="font-mono font-black" style={{ fontSize: "19px", fontWeight: "900", paddingRight: "1mm" }}>
+                            ${(lastTicket.cambio || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}
