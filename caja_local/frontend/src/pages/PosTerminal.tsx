@@ -1,5 +1,5 @@
 import { LicenseModal } from '../components/LicenseModal';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { generateDirectTicketPDF } from '../utils/ticketPdf';
@@ -7,7 +7,7 @@ import {
   ClipboardList, Search, User, Wallet,
   CreditCard, Banknote, Smartphone, PauseCircle,
   CheckCircle2, Bolt, Droplet, ArrowDownToLine, ShoppingCart, Wifi,
-  X, Printer, List, ShieldCheck, Lock, UserCheck, SmartphoneNfc, Layers, Unlock
+  X, Printer, List, ShieldCheck, Lock, UserCheck, SmartphoneNfc, Layers, Unlock, FileSpreadsheet
 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { usePosStore, lineTotal } from '../store/useStore';
@@ -138,6 +138,7 @@ export default function PosTerminal() {
   const [client, setClient] = useState<{ name: string; monedero: number; id?: number }>({ name: 'PUBLICO GENERAL', monedero: 0, id: 0 });
   const [paymentMethod, setPaymentMethod] = useState('EFECTIVO');
   const [montoRecibido, setMontoRecibido] = useState<string>('');
+  const montoRecibidoRef = useRef<HTMLInputElement>(null);
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [showWaModal, setShowWaModal] = useState(false);
   const [waPhone, setWaPhone] = useState('');
@@ -628,6 +629,96 @@ export default function PosTerminal() {
     setShowNegadoModal(false);
   };
 
+  // Billetes inteligentes sugeridos calculados en tiempo real (Fast-Cash)
+  const smartCashList = useMemo(() => {
+    if (total <= 0) return [];
+    const suggestions = new Set<number>();
+    
+    // Siguiente múltiplo de $10 si no es exacto
+    const next10 = Math.ceil(total / 10) * 10;
+    if (next10 > total && next10 <= total + 20) suggestions.add(next10);
+
+    // Siguiente múltiplo de $50 si no es exacto
+    const next50 = Math.ceil(total / 50) * 50;
+    if (next50 > total) suggestions.add(next50);
+
+    // Billetes estándar mayores al total
+    const standardBills = [20, 50, 100, 200, 500, 1000];
+    for (const b of standardBills) {
+      if (b > total) suggestions.add(b);
+    }
+
+    return Array.from(suggestions)
+      .filter(val => val > total)
+      .sort((a, b) => a - b)
+      .slice(0, 4);
+  }, [total]);
+
+  // Cobro ultra rápido en efectivo (1 solo clic / 1 tecla)
+  const handleFastCashPayment = async (amount: number) => {
+    if (cart.length === 0 || total <= 0) {
+      alert("El carrito está vacío");
+      return;
+    }
+    setIsProcessing(false);
+    const { processSale, lastError } = usePosStore.getState();
+    const ticket = await processSale('EFECTIVO', client.name || 'PUBLICO GENERAL', amount);
+    if (ticket) {
+      setLastTicket(ticket);
+      setShowTicketModal(true);
+      openCashDrawer(ticketPrinterName);
+      setMontoRecibido('');
+      setPaymentMethod('EFECTIVO');
+      setClient({ name: 'PUBLICO GENERAL', monedero: 0, id: 0 });
+    } else {
+      alert('Error al procesar la venta: ' + (lastError || 'Verifica los montos.'));
+    }
+  };
+
+  // Cobro directo con otros métodos (1 solo clic / 1 tecla)
+  const handleFastDirectPayment = async (method: string) => {
+    if (cart.length === 0 || total <= 0) {
+      alert("El carrito está vacío");
+      return;
+    }
+    setPaymentMethod(method);
+
+    if (method === 'MERCADO PAGO') {
+      await triggerMercadoPagoPayment();
+      return;
+    }
+    if (method === 'CLIP') {
+      await triggerClipPayment();
+      return;
+    }
+    if (method === 'MIXTO') {
+      setMixtoEfectivo('');
+      setMixtoEfectivoRecibido('');
+      setShowMixtoModal(true);
+      return;
+    }
+    if (method === 'CRÉDITO' && (!client.id || client.name === 'PUBLICO GENERAL')) {
+      alert('Para venta a crédito, selecciona primero un cliente asignado.');
+      setShowClientModal(true);
+      return;
+    }
+
+    // TARJETA, TRANSFERENCIA, CRÉDITO, MONEDERO: Cobro directo por el total exacto
+    setIsProcessing(false);
+    const { processSale, lastError } = usePosStore.getState();
+    const ticket = await processSale(method, client.name || 'PUBLICO GENERAL', total);
+    if (ticket) {
+      setLastTicket(ticket);
+      setShowTicketModal(true);
+      openCashDrawer(ticketPrinterName);
+      setMontoRecibido('');
+      setPaymentMethod('EFECTIVO');
+      setClient({ name: 'PUBLICO GENERAL', monedero: 0, id: 0 });
+    } else {
+      alert('Error al procesar la venta: ' + (lastError || 'Verifica los montos.'));
+    }
+  };
+
   const handlePaymentClick = (method: string) => {
     setPaymentMethod(method);
     if (cart.length > 0 && method !== 'EFECTIVO') {
@@ -1065,18 +1156,87 @@ function resolveTicketPx(val: any, defaultPx: number): string {
     localStorage.setItem('pausedSales', JSON.stringify(updated));
     setShowPausedModal(false);
   };
-// Atajos de teclado
+// Atajos de teclado empresariales
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F3') { e.preventDefault(); openCashDrawer(ticketPrinterName); }
-      if (e.key === 'F4') { e.preventDefault(); setShowNegadoModal(true); }
-      if (e.key === 'F1') { e.preventDefault(); searchInputRef.current?.focus(); }
-      if (e.key === 'F6') { e.preventDefault(); handlePaymentClick('EFECTIVO'); }
-      if (e.key === 'F7') { e.preventDefault(); handlePaymentClick('TARJETA'); }
-      if (e.key === 'F8') { e.preventDefault(); handlePaymentClick('TRANSFERENCIA'); }
-      if (e.key === 'F9') { e.preventDefault(); handlePaymentClick('CRÉDITO'); }
-      if (e.key === 'F10') { e.preventDefault(); handlePaymentClick('MERCADO PAGO'); }
-      if (e.key === 'F11') { e.preventDefault(); handlePaymentClick('MONEDERO'); }
+      const activeEl = document.activeElement;
+      const isInputFocused = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+
+      // F3: Abrir cajón de dinero manualmente
+      if (e.key === 'F3') {
+        e.preventDefault();
+        openCashDrawer(ticketPrinterName);
+        return;
+      }
+
+      // F4: Registrar producto negado / faltante
+      if (e.key === 'F4') {
+        e.preventDefault();
+        setShowNegadoModal(true);
+        return;
+      }
+
+      // F1: Enfocar buscador / escáner de productos
+      if (e.key === 'F1') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+
+      // ESPACIO o F5: PAGO EXACTO EN EFECTIVO (1 solo toque)
+      if (e.key === 'F5' || (e.code === 'Space' && !isInputFocused && !showTicketModal && !isProcessing && !showMixtoModal && !showClientModal && !showPausedModal && !showUserModal && !showAdicionalModal)) {
+        if (cart.length > 0 && total > 0) {
+          e.preventDefault();
+          handleFastCashPayment(total);
+          return;
+        }
+      }
+
+      // F6: Enfocar campo de monto recibido manual
+      if (e.key === 'F6') {
+        e.preventDefault();
+        setPaymentMethod('EFECTIVO');
+        montoRecibidoRef.current?.focus();
+        montoRecibidoRef.current?.select();
+        return;
+      }
+
+      // F7: Tarjeta (1 clic / cobro directo)
+      if (e.key === 'F7') {
+        e.preventDefault();
+        handleFastDirectPayment('TARJETA');
+        return;
+      }
+
+      // F8: Transferencia (1 clic / cobro directo)
+      if (e.key === 'F8') {
+        e.preventDefault();
+        handleFastDirectPayment('TRANSFERENCIA');
+        return;
+      }
+
+      // F9: Crédito (1 clic / cobro directo a cuenta cliente)
+      if (e.key === 'F9') {
+        e.preventDefault();
+        handleFastDirectPayment('CRÉDITO');
+        return;
+      }
+
+      // F10: Terminal Mercado Pago Point
+      if (e.key === 'F10') {
+        e.preventDefault();
+        handleFastDirectPayment('MERCADO PAGO');
+        return;
+      }
+
+      // F11: Monedero Electrónico
+      if (e.key === 'F11') {
+        e.preventDefault();
+        handleFastDirectPayment('MONEDERO');
+        return;
+      }
+
+      // F12: Cobro tradicional o confirmación
       if (e.key === 'F12') {
         e.preventDefault();
         if (isProcessing) {
@@ -1084,7 +1244,10 @@ function resolveTicketPx(val: any, defaultPx: number): string {
         } else {
           handleCobrar();
         }
+        return;
       }
+
+      // Enter
       if (e.key === 'Enter') {
         if (showMixtoModal) {
           e.preventDefault();
@@ -1100,8 +1263,11 @@ function resolveTicketPx(val: any, defaultPx: number): string {
         } else if (isProcessing) {
           e.preventDefault();
           finalizeSaleWithMethod(paymentMethod);
+          return;
         }
       }
+
+      // F2 o P: Imprimir ticket cuando el modal está abierto
       if (e.key === 'p' || e.key === 'P' || e.key === 'F2') {
         if (showTicketModal) {
           e.preventDefault();
@@ -1109,6 +1275,8 @@ function resolveTicketPx(val: any, defaultPx: number): string {
           return;
         }
       }
+
+      // Escape: Cerrar cualquier modal abierto
       if (e.key === 'Escape') {
         if (showTicketModal) {
           e.preventDefault();
@@ -1130,12 +1298,20 @@ function resolveTicketPx(val: any, defaultPx: number): string {
           e.preventDefault();
           setShowPausedModal(false);
           focusSearchInput();
+        } else if (showNegadoModal) {
+          e.preventDefault();
+          setShowNegadoModal(false);
+          focusSearchInput();
+        } else if (showAdicionalModal) {
+          e.preventDefault();
+          setShowAdicionalModal(false);
+          focusSearchInput();
         }
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [cart, paymentMethod, client.name, showTicketModal, isProcessing, montoRecibido]);
+  }, [cart, total, paymentMethod, client.name, showTicketModal, isProcessing, showMixtoModal, showClientModal, showPausedModal, showNegadoModal, showAdicionalModal, montoRecibido, ticketPrinterName]);
 
   const handleCloseTicketModal = () => {
     setShowTicketModal(false);
@@ -1310,103 +1486,239 @@ function resolveTicketPx(val: any, defaultPx: number): string {
             )}
           </div>
 
-          <div className="h-12 bg-nexus-900 border-t border-nexus-800 shrink-0 flex items-center px-4 gap-4 text-[10px] font-black text-slate-500 tracking-widest">
-            <kbd className="bg-nexus-800 px-2 py-1 rounded">F1</kbd> Buscar
-            <span className="text-amber-400 font-black">NEGADO [F4]</span>
-            <div className="w-px h-4 bg-nexus-700 mx-2"></div>
-            <span>EFE [F6]</span>
-            <span>TAR [F7]   CLIP</span>
-            <span>TRANS [F8]</span>
-            <span>CRÉD [F9]</span>
-            <span>MP [F10]</span>
-            <span className="text-fuchsia-400">MON [F11]</span>
+          <div className="h-12 bg-nexus-900 border-t border-nexus-800 shrink-0 flex items-center px-4 gap-3 text-[10px] font-black text-slate-400 tracking-wider overflow-x-auto">
+            <span className="bg-nexus-800 px-2 py-1 rounded text-white border border-nexus-700">F1 Buscar</span>
+            <span className="text-amber-400 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">F4 Negado</span>
+            <div className="w-px h-4 bg-nexus-700"></div>
+            <span className="text-emerald-400 font-black bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">ESPACIO / F5 Exacto</span>
+            <span className="text-slate-300">F6 Manual</span>
+            <span className="text-blue-400">F7 Tarjeta</span>
+            <span className="text-cyan-400">F8 Transf</span>
+            <span className="text-purple-400">F9 Crédito</span>
+            <span className="text-sky-400">F10 Point MP</span>
+            <span className="text-fuchsia-400">F11 Monedero</span>
+            <span className="text-emerald-300">F3 Cajón</span>
           </div>
         </div>
 
-        {/* DERECHA: Totales y Pagos */}
-        <div className="w-[360px] bg-nexus-900 flex flex-col shrink-0 z-10 overflow-y-auto custom-scrollbar pb-4">
+        {/* DERECHA: Totales y Pagos Rápidos Empresariales */}
+        <div className="w-[370px] bg-nexus-900 flex flex-col shrink-0 z-10 overflow-y-auto custom-scrollbar pb-4 border-l border-nexus-800">
           
-          <div className="p-6 text-center border-b border-nexus-800 bg-nexus-900/80">
-            <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Total a Pagar</h3>
-            <p className="text-6xl font-black text-white tracking-tighter">${total.toFixed(2)}</p>
+          {/* TOTAL PRINCIPAL */}
+          <div className="p-5 text-center border-b border-nexus-800 bg-gradient-to-b from-nexus-850 to-nexus-900">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total a Pagar</h3>
+            <p className="text-5xl font-black text-white tracking-tight font-mono">${total.toFixed(2)}</p>
             {total > 0 && (
               <p className="text-[10px] text-fuchsia-400 font-bold mt-2 bg-fuchsia-500/10 inline-block px-3 py-1 rounded-full border border-fuchsia-500/20">
-                + ${(abonoMonedero).toFixed(2)} se abonarán al monedero
+                + ${(abonoMonedero).toFixed(2)} acumulables a monedero
               </p>
             )}
           </div>
 
-          <div className="grid grid-cols-6 gap-2 p-4 border-b border-nexus-800">
-            {[20, 50, 100, 200, 500, 1000].map(val => (
-              <button 
-                key={val} 
-                onClick={() => setMontoRecibido(val.toString())}
-                className="bg-nexus-800 hover:bg-nexus-700 border border-nexus-700 rounded-lg py-2 text-xs font-bold text-slate-300 transition-colors"
-              >
-                ${val}
-              </button>
-            ))}
+          {/* 1-CLIC PAGO EXACTO EN EFECTIVO (TECLA ESPACIO / F5) */}
+          <div className="p-3 border-b border-nexus-800 bg-emerald-950/20">
+            <button
+              onClick={() => handleFastCashPayment(total)}
+              disabled={cart.length === 0 || total <= 0}
+              className={`w-full py-3.5 px-4 rounded-2xl font-black flex items-center justify-between shadow-lg transition-all border ${
+                cart.length > 0 && total > 0
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white border-emerald-400/50 shadow-emerald-900/30 active:scale-[0.99] cursor-pointer'
+                  : 'bg-nexus-800/60 text-slate-500 border-nexus-700/50 cursor-not-allowed opacity-50'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Banknote className="w-5 h-5 text-emerald-200" />
+                <div className="text-left leading-tight">
+                  <div className="text-xs uppercase tracking-wider font-black">PAGO EXACTO</div>
+                  <div className="text-[9px] text-emerald-200/80 font-mono font-bold">[ESPACIO / F5]</div>
+                </div>
+              </div>
+              <span className="text-xl font-mono font-black tracking-tight text-white">
+                ${total.toFixed(2)}
+              </span>
+            </button>
           </div>
 
-          <div className="flex gap-4 p-4 border-b border-nexus-800">
-            <div className="flex-1">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Monto Recibido</label>
-              <input 
-                type="number" 
-                value={montoRecibido}
-                onChange={(e) => setMontoRecibido(e.target.value)}
-                className="w-full bg-nexus-800 border border-nexus-700 text-white px-4 py-3 rounded-xl font-black text-xl text-center focus:outline-none focus:border-nexus-accent"
-                placeholder="$0.00"
-              />
+          {/* BILLETES INTELIGENTES SUGERIDOS CON CAMBIO PRE-CALCULADO */}
+          {smartCashList.length > 0 && (
+            <div className="p-3 border-b border-nexus-800 bg-nexus-900/50">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                💵 Billetes Sugeridos (Cobro directo)
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                {smartCashList.map((bill) => {
+                  const billCambio = bill - total;
+                  return (
+                    <button
+                      key={bill}
+                      onClick={() => handleFastCashPayment(bill)}
+                      className="bg-nexus-800/90 hover:bg-nexus-750 border border-nexus-700 hover:border-emerald-500/60 rounded-xl p-2.5 text-left transition-all group flex flex-col justify-between shadow-sm active:scale-95"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-base font-black text-white font-mono group-hover:text-emerald-300">
+                          ${bill}
+                        </span>
+                        <span className="text-[9px] bg-nexus-700 text-slate-300 px-1.5 py-0.5 rounded font-mono font-bold">
+                          Cobrar
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-400 font-mono mt-1">
+                        Cambio: ${billCambio.toFixed(2)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="flex-1">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Su Cambio</label>
-              <div className="w-full bg-[#0b1120] border border-nexus-800 text-emerald-400 px-4 py-3 rounded-xl font-black text-xl text-center">
-                ${cambio > 0 ? cambio.toFixed(2) : '0.00'}
+          )}
+
+          {/* MONTO RECIBIDO MANUAL (F6) + SU CAMBIO */}
+          <div className="p-3 border-b border-nexus-800 bg-nexus-900/30">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                    Monto Recibido
+                  </label>
+                  <span className="text-[8px] font-mono font-bold bg-nexus-800 text-slate-400 px-1 rounded">F6</span>
+                </div>
+                <input 
+                  ref={montoRecibidoRef}
+                  type="number" 
+                  value={montoRecibido}
+                  onChange={(e) => {
+                    setMontoRecibido(e.target.value);
+                    if (paymentMethod !== 'EFECTIVO') setPaymentMethod('EFECTIVO');
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const val = parseFloat(montoRecibido);
+                      if (!isNaN(val) && val >= total) {
+                        handleFastCashPayment(val);
+                      } else {
+                        handleCobrar();
+                      }
+                    }
+                  }}
+                  className="w-full bg-[#0b1120] border border-nexus-700 focus:border-emerald-500 text-white px-3 py-2 rounded-xl font-mono font-black text-lg text-center focus:outline-none transition-colors"
+                  placeholder="$0.00"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                  Su Cambio
+                </label>
+                <div className={`w-full bg-[#0b1120] border px-3 py-2 rounded-xl font-mono font-black text-lg text-center transition-colors ${
+                  cambio > 0 ? 'border-emerald-500 text-emerald-400 bg-emerald-950/20' : 'border-nexus-800 text-slate-500'
+                }`}>
+                  ${cambio > 0 ? cambio.toFixed(2) : '0.00'}
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="p-4 border-b border-nexus-800">
-            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Método de Pago</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {['EFECTIVO', 'TARJETA', 'CLIP', 'MERCADO PAGO', 'TRANSFERENCIA', 'MIXTO', 'CRÉDITO', 'MONEDERO'].map(met => (
-                <button 
-                  key={met}
-                  onClick={() => handlePaymentClick(met)} 
-                  className={`flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-bold border transition-colors ${
-                    paymentMethod === met 
-                    ? met === 'CLIP' ? 'bg-amber-600/30 border-amber-500 text-amber-400 font-black shadow-md ring-1 ring-amber-400' : met === 'MONEDERO' ? 'bg-fuchsia-600/20 border-fuchsia-500 text-fuchsia-400' : met === 'MIXTO' ? 'bg-amber-600/20 border-amber-500 text-amber-400' : 'bg-blue-600/20 border-blue-500 text-blue-400' 
-                    : met === 'CLIP' ? 'bg-nexus-800 border-amber-600/40 text-amber-400 hover:bg-nexus-700' : met === 'MONEDERO' ? 'bg-nexus-800 border-nexus-700 text-fuchsia-400/70 hover:bg-nexus-700' : met === 'MIXTO' ? 'bg-nexus-800 border-nexus-700 text-amber-400/80 hover:bg-nexus-700' : 'bg-nexus-800 border-nexus-700 text-slate-300 hover:bg-nexus-700'
-                  }`}
-                >
-                  {met === 'EFECTIVO' && <Banknote className="w-3 h-3" />}
-                  {met === 'TARJETA' && <CreditCard className="w-3 h-3 text-blue-400" />}
-                  {met === 'CLIP' && <CreditCard className="w-3 h-3 text-amber-400" />}
-                  {met === 'MIXTO' && <Layers className="w-3 h-3 text-amber-400" />}
-                  {met === 'MONEDERO' && <Wallet className="w-3 h-3" />}
-                  {met === 'CLIP' ? 'CLIP' : met}
-                </button>
-              ))}
+          {/* OTROS MÉTODOS DE PAGO: COBRO DIRECTO 1-CLIC */}
+          <div className="p-3 border-b border-nexus-800">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+              💳 Otros Métodos de Pago
+            </span>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <button
+                onClick={() => handleFastDirectPayment('TARJETA')}
+                className="flex items-center gap-2 p-2.5 rounded-xl border border-blue-500/30 bg-blue-950/30 hover:bg-blue-900/40 text-blue-300 font-bold text-xs transition-colors group text-left"
+              >
+                <CreditCard className="w-4 h-4 text-blue-400 shrink-0 group-hover:scale-110 transition-transform" />
+                <div className="leading-tight">
+                  <div className="font-black text-white">TARJETA</div>
+                  <div className="text-[8px] text-blue-400 font-mono">[F7 Directo]</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleFastDirectPayment('TRANSFERENCIA')}
+                className="flex items-center gap-2 p-2.5 rounded-xl border border-cyan-500/30 bg-cyan-950/30 hover:bg-cyan-900/40 text-cyan-300 font-bold text-xs transition-colors group text-left"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-cyan-400 shrink-0 group-hover:scale-110 transition-transform" />
+                <div className="leading-tight">
+                  <div className="font-black text-white">TRANSF.</div>
+                  <div className="text-[8px] text-cyan-400 font-mono">[F8 Directo]</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleFastDirectPayment('CRÉDITO')}
+                className="flex items-center gap-2 p-2.5 rounded-xl border border-purple-500/30 bg-purple-950/30 hover:bg-purple-900/40 text-purple-300 font-bold text-xs transition-colors group text-left"
+              >
+                <UserCheck className="w-4 h-4 text-purple-400 shrink-0 group-hover:scale-110 transition-transform" />
+                <div className="leading-tight">
+                  <div className="font-black text-white">CRÉDITO</div>
+                  <div className="text-[8px] text-purple-400 font-mono">[F9 Fiado]</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleFastDirectPayment('MIXTO')}
+                className="flex items-center gap-2 p-2.5 rounded-xl border border-amber-500/30 bg-amber-950/30 hover:bg-amber-900/40 text-amber-300 font-bold text-xs transition-colors group text-left"
+              >
+                <Layers className="w-4 h-4 text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
+                <div className="leading-tight">
+                  <div className="font-black text-white">MIXTO</div>
+                  <div className="text-[8px] text-amber-400 font-mono">[Efe + Dig]</div>
+                </div>
+              </button>
+            </div>
+
+            {/* Terminales Digitales y Monedero */}
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                onClick={() => handleFastDirectPayment('MERCADO PAGO')}
+                className="p-2 rounded-lg border border-sky-500/30 bg-sky-950/20 hover:bg-sky-900/30 text-sky-300 text-[10px] font-black transition-colors text-center"
+              >
+                <div>POINT MP</div>
+                <div className="text-[8px] text-sky-400 font-mono">[F10]</div>
+              </button>
+
+              <button
+                onClick={() => handleFastDirectPayment('CLIP')}
+                className="p-2 rounded-lg border border-orange-500/30 bg-orange-950/20 hover:bg-orange-900/30 text-orange-300 text-[10px] font-black transition-colors text-center"
+              >
+                <div>CLIP</div>
+                <div className="text-[8px] text-orange-400 font-mono">Terminal</div>
+              </button>
+
+              <button
+                onClick={() => handleFastDirectPayment('MONEDERO')}
+                className="p-2 rounded-lg border border-fuchsia-500/30 bg-fuchsia-950/20 hover:bg-fuchsia-900/30 text-fuchsia-300 text-[10px] font-black transition-colors text-center"
+              >
+                <div className="flex items-center justify-center gap-1">
+                  <Wallet className="w-2.5 h-2.5 text-fuchsia-400" />
+                  <span>MONEDERO</span>
+                </div>
+                <div className="text-[8px] text-fuchsia-400 font-mono">[F11]</div>
+              </button>
             </div>
           </div>
 
-          <div className="p-4 space-y-3">
-            <button onClick={handlePausar} className="w-full py-3 bg-nexus-800 hover:bg-nexus-700 border border-nexus-700 rounded-xl text-amber-500 font-bold text-sm flex items-center justify-center gap-2 transition-colors">
-              <PauseCircle className="w-4 h-4" /> PAUSAR VENTA
-            </button>
-            {pausedSales.length > 0 && (
-              <button onClick={() => setShowPausedModal(true)} className="w-full py-2 bg-nexus-800 hover:bg-nexus-700 border border-nexus-700 rounded-xl text-blue-400 font-bold text-xs flex items-center justify-center gap-2 transition-colors mt-2">
-                RECUPERAR ({pausedSales.length})
+          {/* PAUSAR / RECUPERAR / BOTÓN COBRAR (F12) */}
+          <div className="p-3 space-y-2">
+            <div className="flex gap-2">
+              <button onClick={handlePausar} className="flex-1 py-2 bg-nexus-800 hover:bg-nexus-750 border border-nexus-700 rounded-xl text-amber-400 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors">
+                <PauseCircle className="w-3.5 h-3.5" /> PAUSAR
               </button>
-            )}
+              {pausedSales.length > 0 && (
+                <button onClick={() => setShowPausedModal(true)} className="flex-1 py-2 bg-nexus-800 hover:bg-nexus-750 border border-nexus-700 rounded-xl text-blue-400 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors">
+                  RECUPERAR ({pausedSales.length})
+                </button>
+              )}
+            </div>
             <button 
               onClick={handleCobrar} 
-              className={`w-full py-5 rounded-xl text-white font-black text-xl flex items-center justify-center gap-2 shadow-lg transition-colors ${
-                cart.length > 0 ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/20' : 'bg-slate-700 '
+              className={`w-full py-3.5 rounded-xl text-white font-black text-base flex items-center justify-center gap-2 shadow-lg transition-colors ${
+                cart.length > 0 ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/20 cursor-pointer' : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
               }`}
             >
-              <CheckCircle2 className="w-6 h-6" /> COBRAR VENTA
+              <CheckCircle2 className="w-5 h-5" /> COBRAR VENTA (F12)
             </button>
           </div>
 
@@ -1734,6 +2046,42 @@ function resolveTicketPx(val: any, defaultPx: number): string {
             </div>
 
             <p className="text-center text-xs font-black text-slate-500 uppercase tracking-widest mb-4">FOLIO #{lastTicket.folio} - {lastTicket.date}</p>
+
+            {/* BANNER GIGANTE DE CAMBIO / ESTADO DE COBRO (ESTILO EMPRESARIAL / OXXO) */}
+            {lastTicket.method === 'EFECTIVO' && (
+              <div className="mb-4 p-4 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/80 text-center shadow-[0_0_30px_rgba(16,185,129,0.25)]">
+                <span className="text-xs font-black uppercase tracking-widest text-emerald-400 block mb-1">
+                  💰 SU CAMBIO A ENTREGAR
+                </span>
+                <span className="text-5xl font-black text-emerald-300 tracking-tight font-mono">
+                  ${(Number(lastTicket.cambio) || 0).toFixed(2)}
+                </span>
+                <div className="mt-3 text-xs font-bold text-slate-300 flex justify-around border-t border-emerald-500/30 pt-2 font-mono">
+                  <span>Total: ${Number(lastTicket.total || 0).toFixed(2)}</span>
+                  <span>Recibido: ${Number(lastTicket.recibido || lastTicket.total || 0).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+            {lastTicket.method === 'MIXTO' && Number(lastTicket.cambio) > 0 && (
+              <div className="mb-4 p-4 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/80 text-center shadow-[0_0_30px_rgba(16,185,129,0.25)]">
+                <span className="text-xs font-black uppercase tracking-widest text-emerald-400 block mb-1">
+                  💰 SU CAMBIO A ENTREGAR (PARTE EN EFECTIVO)
+                </span>
+                <span className="text-5xl font-black text-emerald-300 tracking-tight font-mono">
+                  ${(Number(lastTicket.cambio) || 0).toFixed(2)}
+                </span>
+              </div>
+            )}
+            {lastTicket.method !== 'EFECTIVO' && lastTicket.method !== 'MIXTO' && (
+              <div className="mb-4 p-3 rounded-2xl bg-blue-500/15 border border-blue-500/80 text-center shadow-[0_0_20px_rgba(59,130,246,0.2)]">
+                <span className="text-xs font-black uppercase tracking-widest text-blue-400 block mb-1">
+                  ✅ PAGO COMPLETADO CON {lastTicket.method}
+                </span>
+                <span className="text-3xl font-black text-white tracking-tight font-mono">
+                  ${Number(lastTicket.total || 0).toFixed(2)}
+                </span>
+              </div>
+            )}
 
             {/* CONTENEDOR MODAL PANTALLA */}
             <div className="w-full max-w-[340px] mx-auto">

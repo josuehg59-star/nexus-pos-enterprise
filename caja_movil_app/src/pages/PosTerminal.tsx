@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { generateDirectTicketPDF } from '../utils/ticketPdf';
@@ -6,7 +6,7 @@ import {
   Search, User, Wallet,
   CreditCard, Banknote, Smartphone, PauseCircle,
   CheckCircle2, Bolt, Droplet, ArrowDownToLine, ShoppingCart, Wifi,
-  X, Printer, List, ShieldCheck, Lock, UserCheck, SmartphoneNfc, Layers
+  X, Printer, List, ShieldCheck, Lock, UserCheck, SmartphoneNfc, Layers, FileSpreadsheet
 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { usePosStore, lineTotal } from '../store/useStore';
@@ -568,6 +568,95 @@ export default function PosTerminal() {
       setProcessMsg("Error de conexión");
       setMpStatus({ loading: false, ok: false, message: (e as Error).message });
       return false;
+    }
+  };
+
+  // Billetes inteligentes sugeridos calculados en tiempo real (Fast-Cash)
+  const smartCashList = useMemo(() => {
+    if (total <= 0) return [];
+    const suggestions = new Set<number>();
+    
+    // Siguiente múltiplo de $10 si no es exacto
+    const next10 = Math.ceil(total / 10) * 10;
+    if (next10 > total && next10 <= total + 20) suggestions.add(next10);
+
+    // Siguiente múltiplo de $50 si no es exacto
+    const next50 = Math.ceil(total / 50) * 50;
+    if (next50 > total) suggestions.add(next50);
+
+    // Billetes estándar mayores al total
+    const standardBills = [20, 50, 100, 200, 500, 1000];
+    for (const b of standardBills) {
+      if (b > total) suggestions.add(b);
+    }
+
+    return Array.from(suggestions)
+      .filter(val => val > total)
+      .sort((a, b) => a - b)
+      .slice(0, 4);
+  }, [total]);
+
+  // Cobro ultra rápido en efectivo (1 solo toque)
+  const handleFastCashPayment = async (amount: number) => {
+    if (cart.length === 0 || total <= 0) {
+      alert("El carrito está vacío");
+      return;
+    }
+    setShowMobileCheckoutModal(false);
+    setIsProcessing(false);
+    const { processSale, lastError } = usePosStore.getState();
+    const ticket = await processSale('EFECTIVO', client.name || 'PUBLICO GENERAL', amount);
+    if (ticket) {
+      setLastTicket(ticket);
+      setShowTicketModal(true);
+      setMontoRecibido('');
+      setPaymentMethod('EFECTIVO');
+      setClient({ name: 'PUBLICO GENERAL', monedero: 0, id: 0 });
+    } else {
+      alert('Error al procesar la venta: ' + (lastError || 'Verifica los montos.'));
+    }
+  };
+
+  // Cobro directo con otros métodos (1 solo toque)
+  const handleFastDirectPayment = async (method: string) => {
+    if (cart.length === 0 || total <= 0) {
+      alert("El carrito está vacío");
+      return;
+    }
+    setPaymentMethod(method);
+    setShowMobileCheckoutModal(false);
+
+    if (method === 'MERCADO PAGO') {
+      await triggerMercadoPagoPayment();
+      return;
+    }
+    if (method === 'CLIP') {
+      await triggerClipPayment();
+      return;
+    }
+    if (method === 'MIXTO') {
+      setMixtoEfectivo('');
+      setMixtoEfectivoRecibido('');
+      setShowMixtoModal(true);
+      return;
+    }
+    if (method === 'CRÉDITO' && (!client.id || client.name === 'PUBLICO GENERAL')) {
+      alert('Para venta a crédito, selecciona primero un cliente asignado.');
+      setShowClientModal(true);
+      return;
+    }
+
+    setIsProcessing(false);
+    const { processSale, lastError } = usePosStore.getState();
+    const ticket = await processSale(method, client.name || 'PUBLICO GENERAL', total);
+    if (ticket) {
+      setLastTicket(ticket);
+      setShowTicketModal(true);
+      setMontoRecibido('');
+      setPaymentMethod('EFECTIVO');
+      setClient({ name: 'PUBLICO GENERAL', monedero: 0, id: 0 });
+    } else {
+      alert('Error al procesar la venta: ' + (lastError || 'Verifica los montos.'));
     }
   };
 
@@ -1203,20 +1292,46 @@ function resolveTicketPx(val: any, defaultPx: number): string {
                 <span className="text-4xl font-black text-emerald-400 font-mono">${total.toFixed(2)}</span>
               </div>
 
-              <div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">BILLETES RÁPIDOS</span>
-                <div className="grid grid-cols-3 gap-2">
-                  {[total, 50, 100, 200, 500, 1000].map((val, idx) => (
-                    <button 
-                      key={idx} 
-                      onClick={() => setMontoRecibido(Math.round(val).toString())}
-                      className="bg-nexus-800 hover:bg-nexus-700 active:scale-95 border border-nexus-700 rounded-xl py-2.5 text-sm font-black text-white transition-all"
-                    >
-                      {idx === 0 ? `Exacto ($${Math.round(val)})` : `$${val}`}
-                    </button>
-                  ))}
+              {/* 1-TOQUE PAGO EXACTO EN EFECTIVO */}
+              <button
+                onClick={() => handleFastCashPayment(total)}
+                className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white font-black flex items-center justify-between shadow-lg shadow-emerald-900/40 active:scale-95 transition-all"
+              >
+                <div className="flex items-center gap-2">
+                  <Banknote className="w-5 h-5 text-emerald-200" />
+                  <span className="text-sm uppercase tracking-wider font-black">PAGO EXACTO EFECTIVO</span>
                 </div>
-              </div>
+                <span className="text-lg font-mono font-black">${total.toFixed(2)}</span>
+              </button>
+
+              {/* BILLETES SUGERIDOS CON CAMBIO PRE-CALCULADO */}
+              {smartCashList.length > 0 && (
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    💵 Billetes Sugeridos (Cobro inmediato)
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {smartCashList.map((bill) => {
+                      const billCambio = bill - total;
+                      return (
+                        <button
+                          key={bill}
+                          onClick={() => handleFastCashPayment(bill)}
+                          className="bg-nexus-800 hover:bg-nexus-750 active:scale-95 border border-nexus-700 hover:border-emerald-500/60 rounded-xl p-2.5 text-left transition-all shadow-sm flex flex-col justify-between"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-base font-black text-white font-mono">${bill}</span>
+                            <span className="text-[8px] bg-emerald-500/20 text-emerald-300 px-1 rounded font-bold uppercase">Cobrar</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-emerald-400 font-mono mt-1">
+                            Cambio: ${billCambio.toFixed(2)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1238,25 +1353,36 @@ function resolveTicketPx(val: any, defaultPx: number): string {
               </div>
 
               <div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">MÉTODO DE PAGO</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">OTROS MÉTODOS (1 TOQUE)</span>
                 <div className="grid grid-cols-2 gap-2">
-                  {['EFECTIVO', 'TARJETA', 'CLIP', 'MERCADO PAGO', 'TRANSFERENCIA', 'MIXTO'].map(met => (
-                    <button 
-                      key={met}
-                      onClick={() => setPaymentMethod(met)} 
-                      className={`py-2.5 px-3 rounded-xl text-xs font-black border transition-all active:scale-95 flex items-center justify-center gap-1.5 ${
-                        paymentMethod === met 
-                          ? 'bg-emerald-600 border-emerald-400 text-white shadow-lg shadow-emerald-600/30' 
-                          : 'bg-nexus-800 border-nexus-700 text-slate-300'
-                      }`}
-                    >
-                      {met === 'EFECTIVO' && <Banknote className="w-3.5 h-3.5" />}
-                      {met === 'TARJETA' && <CreditCard className="w-3.5 h-3.5" />}
-                      {met === 'CLIP' && <CreditCard className="w-3.5 h-3.5 text-amber-400" />}
-                      {met === 'MIXTO' && <Layers className="w-3.5 h-3.5 text-amber-400" />}
-                      <span>{met}</span>
-                    </button>
-                  ))}
+                  <button 
+                    onClick={() => handleFastDirectPayment('TARJETA')} 
+                    className="py-2.5 px-3 rounded-xl text-xs font-black border border-blue-500/40 bg-blue-950/30 text-blue-300 active:scale-95 flex items-center justify-center gap-1.5"
+                  >
+                    <CreditCard className="w-3.5 h-3.5 text-blue-400" />
+                    <span>TARJETA</span>
+                  </button>
+                  <button 
+                    onClick={() => handleFastDirectPayment('TRANSFERENCIA')} 
+                    className="py-2.5 px-3 rounded-xl text-xs font-black border border-cyan-500/40 bg-cyan-950/30 text-cyan-300 active:scale-95 flex items-center justify-center gap-1.5"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>TRANSF.</span>
+                  </button>
+                  <button 
+                    onClick={() => handleFastDirectPayment('CLIP')} 
+                    className="py-2.5 px-3 rounded-xl text-xs font-black border border-amber-500/40 bg-amber-950/30 text-amber-300 active:scale-95 flex items-center justify-center gap-1.5"
+                  >
+                    <CreditCard className="w-3.5 h-3.5 text-amber-400" />
+                    <span>CLIP</span>
+                  </button>
+                  <button 
+                    onClick={() => handleFastDirectPayment('MIXTO')} 
+                    className="py-2.5 px-3 rounded-xl text-xs font-black border border-purple-500/40 bg-purple-950/30 text-purple-300 active:scale-95 flex items-center justify-center gap-1.5"
+                  >
+                    <Layers className="w-3.5 h-3.5 text-purple-400" />
+                    <span>MIXTO</span>
+                  </button>
                 </div>
               </div>
 
@@ -1570,6 +1696,42 @@ function resolveTicketPx(val: any, defaultPx: number): string {
             </div>
 
             <p className="text-center text-xs font-black text-slate-500 uppercase tracking-widest mb-4">FOLIO #{lastTicket.folio} - {lastTicket.date}</p>
+
+            {/* BANNER GIGANTE DE CAMBIO / ESTADO DE COBRO (ESTILO EMPRESARIAL / OXXO) */}
+            {lastTicket.method === 'EFECTIVO' && (
+              <div className="mb-4 p-4 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/80 text-center shadow-[0_0_30px_rgba(16,185,129,0.25)]">
+                <span className="text-xs font-black uppercase tracking-widest text-emerald-400 block mb-1">
+                  💰 SU CAMBIO A ENTREGAR
+                </span>
+                <span className="text-5xl font-black text-emerald-300 tracking-tight font-mono">
+                  ${(Number(lastTicket.cambio) || 0).toFixed(2)}
+                </span>
+                <div className="mt-3 text-xs font-bold text-slate-300 flex justify-around border-t border-emerald-500/30 pt-2 font-mono">
+                  <span>Total: ${Number(lastTicket.total || 0).toFixed(2)}</span>
+                  <span>Recibido: ${Number(lastTicket.recibido || lastTicket.total || 0).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+            {lastTicket.method === 'MIXTO' && Number(lastTicket.cambio) > 0 && (
+              <div className="mb-4 p-4 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/80 text-center shadow-[0_0_30px_rgba(16,185,129,0.25)]">
+                <span className="text-xs font-black uppercase tracking-widest text-emerald-400 block mb-1">
+                  💰 SU CAMBIO A ENTREGAR (PARTE EN EFECTIVO)
+                </span>
+                <span className="text-5xl font-black text-emerald-300 tracking-tight font-mono">
+                  ${(Number(lastTicket.cambio) || 0).toFixed(2)}
+                </span>
+              </div>
+            )}
+            {lastTicket.method !== 'EFECTIVO' && lastTicket.method !== 'MIXTO' && (
+              <div className="mb-4 p-3 rounded-2xl bg-blue-500/15 border border-blue-500/80 text-center shadow-[0_0_20px_rgba(59,130,246,0.2)]">
+                <span className="text-xs font-black uppercase tracking-widest text-blue-400 block mb-1">
+                  ✅ PAGO COMPLETADO CON {lastTicket.method}
+                </span>
+                <span className="text-3xl font-black text-white tracking-tight font-mono">
+                  ${Number(lastTicket.total || 0).toFixed(2)}
+                </span>
+              </div>
+            )}
 
             {/* CONTENEDOR MODAL PANTALLA */}
             <div className="w-full max-w-[340px] mx-auto">
