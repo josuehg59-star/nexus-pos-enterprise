@@ -266,14 +266,10 @@ export class EscPosBuilder {
     return this;
   }
 
-  // Apertura de cajón de dinero (Pulso eléctrico al puerto RJ11/RJ12 pines 2 y 5)
+  // Apertura de cajón de dinero (Pulso eléctrico al puerto RJ11/RJ12 pin 2)
   openDrawer(): this {
-    // 1. ESC p m t1 t2 (Estándar ESC/POS pines 2 y 5)
-    this.buffer.push(0x1B, 0x70, 0x00, 0x19, 0xFA);
-    this.buffer.push(0x1B, 0x70, 0x01, 0x19, 0xFA);
-    // 2. DLE DC4 real-time kick pulse (impresoras térmicas POS-58 y POS-80)
-    this.buffer.push(0x10, 0x14, 0x01, 0x00, 0x05);
-    this.buffer.push(0x10, 0x14, 0x01, 0x01, 0x05);
+    // 1 pulso limpio estándar ESC/POS (50ms de activación / 250ms reposo)
+    this.buffer.push(0x1B, 0x70, 0x00, 0x19, 0x7D);
     return this;
   }
 
@@ -522,8 +518,17 @@ export async function buildTicketEscPos(
   return builder;
 }
 
-// Función independiente para abrir cajón de dinero (botón manual o atajo F3)
+// Función independiente para abrir cajón de dinero con protección anti-rebote (máx 1 pulso por 1.5s)
+let lastDrawerKickTs = 0;
+
 export async function openCashDrawer(printerName?: string): Promise<boolean> {
+  const now = Date.now();
+  if (now - lastDrawerKickTs < 1500) {
+    // Ya se envió pulso de apertura hace menos de 1.5s, ignorar duplicado para evitar ruidos de golpeteo
+    return true;
+  }
+  lastDrawerKickTs = now;
+
   const pName = printerName || (typeof localStorage !== 'undefined' ? (localStorage.getItem('nexus_selected_printer') || '') : '');
   if (!pName) return false;
   try {
