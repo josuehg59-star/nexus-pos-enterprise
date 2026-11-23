@@ -6,7 +6,7 @@ import {
   Search, User, Wallet,
   CreditCard, Banknote, Smartphone, PauseCircle,
   CheckCircle2, Bolt, Droplet, ArrowDownToLine, ShoppingCart, Wifi,
-  X, Printer, List, ShieldCheck, Lock, UserCheck, SmartphoneNfc, Layers, FileSpreadsheet, Coins
+  X, Printer, List, ShieldCheck, Lock, UserCheck, SmartphoneNfc, Layers, FileSpreadsheet
 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { usePosStore, lineTotal, lineSavings } from '../store/useStore';
@@ -1380,7 +1380,7 @@ function resolveTicketPx(val: any, defaultPx: number): string {
 
               <div>
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">OTROS MÉTODOS (1 TOQUE)</span>
-                <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button 
                     onClick={() => handleFastDirectPayment('TARJETA')} 
                     className="py-2.5 px-3 rounded-xl text-xs font-black border border-blue-500/40 bg-blue-950/30 text-blue-300 active:scale-95 flex items-center justify-center gap-1.5"
@@ -1393,30 +1393,23 @@ function resolveTicketPx(val: any, defaultPx: number): string {
                     className="py-2.5 px-3 rounded-xl text-xs font-black border border-cyan-500/40 bg-cyan-950/30 text-cyan-300 active:scale-95 flex items-center justify-center gap-1.5"
                   >
                     <FileSpreadsheet className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>TRANSF. / QR</span>
+                    <span>TRANSF.</span>
                   </button>
                   <button 
-                    onClick={() => handleFastDirectPayment('CRÉDITO')} 
-                    className="py-2.5 px-3 rounded-xl text-xs font-black border border-purple-500/40 bg-purple-950/30 text-purple-300 active:scale-95 flex items-center justify-center gap-1.5"
+                    onClick={() => handleFastDirectPayment('CLIP')} 
+                    className="py-2.5 px-3 rounded-xl text-xs font-black border border-amber-500/40 bg-amber-950/30 text-amber-300 active:scale-95 flex items-center justify-center gap-1.5"
                   >
-                    <UserCheck className="w-3.5 h-3.5 text-purple-400" />
-                    <span>CRÉDITO</span>
+                    <CreditCard className="w-3.5 h-3.5 text-amber-400" />
+                    <span>CLIP</span>
                   </button>
                   <button 
                     onClick={() => handleFastDirectPayment('MIXTO')} 
-                    className="py-2.5 px-3 rounded-xl text-xs font-black border border-amber-500/40 bg-amber-950/30 text-amber-300 active:scale-95 flex items-center justify-center gap-1.5"
+                    className="py-2.5 px-3 rounded-xl text-xs font-black border border-purple-500/40 bg-purple-950/30 text-purple-300 active:scale-95 flex items-center justify-center gap-1.5"
                   >
-                    <Layers className="w-3.5 h-3.5 text-amber-400" />
+                    <Layers className="w-3.5 h-3.5 text-purple-400" />
                     <span>MIXTO</span>
                   </button>
                 </div>
-                <button 
-                  onClick={() => handleFastDirectPayment('MONEDERO')} 
-                  className="w-full py-2.5 px-3 rounded-xl text-xs font-black border border-fuchsia-500/40 bg-fuchsia-950/30 text-fuchsia-300 active:scale-95 flex items-center justify-center gap-1.5"
-                >
-                  <Coins className="w-3.5 h-3.5 text-fuchsia-400" />
-                  <span>MONEDERO ELECTRÓNICO (PUNTOS)</span>
-                </button>
               </div>
 
               <div className="pt-2">

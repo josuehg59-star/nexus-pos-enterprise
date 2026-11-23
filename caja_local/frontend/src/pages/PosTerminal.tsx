@@ -7,7 +7,7 @@ import {
   ClipboardList, Search, User, Wallet,
   CreditCard, Banknote, Smartphone, PauseCircle,
   CheckCircle2, Bolt, Droplet, ArrowDownToLine, ShoppingCart, Wifi,
-  X, Printer, List, ShieldCheck, Lock, UserCheck, SmartphoneNfc, Layers, Unlock, FileSpreadsheet, Plus, Tag, Percent, Coins
+  X, Printer, List, ShieldCheck, Lock, UserCheck, SmartphoneNfc, Layers, Unlock, FileSpreadsheet, Plus, Tag, Percent
 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { usePosStore, lineTotal, lineSavings } from '../store/useStore';
@@ -107,7 +107,7 @@ function formatTicketDate(dStr: any) {
 
 export default function PosTerminal() {
   const { isOnline } = useLiveSyncStore();
-  const { nombreNegocio, rfc, eslogan, telefono, direccion, mercadoPagoToken, mercadoPagoDeviceId, terminalBancariaModo, servidorIp, clipApiKey, clipSecretKey, clipSerialNumber, clipModo, logo, cajaNombre, activeUser, usersList, requirePasswordLogin, ticketFontFamily, ticketFontSize, ticketTitleSize, ticketDetailSize, ticketTotalSize, ticketFontWeight, ticketHeaderAlign, ticketWordWrap, ticketWidth, ticketCharsPerLine, ticketFeedLines, ticketShowLogo, ticketPrinterName, setSettings } = useSettings();
+  const { nombreNegocio, rfc, eslogan, telefono, direccion, mercadoPagoToken, mercadoPagoDeviceId, servidorIp, clipApiKey, clipSecretKey, clipSerialNumber, clipModo, logo, cajaNombre, activeUser, usersList, requirePasswordLogin, ticketFontFamily, ticketFontSize, ticketTitleSize, ticketDetailSize, ticketTotalSize, ticketFontWeight, ticketHeaderAlign, ticketWordWrap, ticketWidth, ticketCharsPerLine, ticketFeedLines, ticketShowLogo, ticketPrinterName, setSettings } = useSettings();
   const searchInputRef = useRef<HTMLInputElement>(null);
   
   const { cart, total, addToCart, removeFromCart, updateQuantity, processSale, clearCart, restoreCart } = usePosStore();
@@ -134,7 +134,6 @@ export default function PosTerminal() {
   const [showUserModal, setShowUserModal] = useState(false);
   const [selectedUserToSwitch, setSelectedUserToSwitch] = useState<any>(null);
   const [userPinInput, setUserPinInput] = useState('');
-  const [showSelectTerminalModal, setShowSelectTerminalModal] = useState(false);
 
   // Pestañas de Venta Simultáneas (Multi-Ticket Tabs con Crash Recovery)
   interface PosTab {
@@ -844,36 +843,6 @@ export default function PosTerminal() {
     }
   };
 
-  // Cobro inteligente unificado de tarjetas (Mercado Pago, Clip o Terminal Bancaria)
-  const handleCardPaymentRoute = async () => {
-    if (cart.length === 0 || total <= 0) {
-      alert("El carrito está vacío");
-      return;
-    }
-    setPaymentMethod('TARJETA');
-
-    // 1. Si está configurado para Mercado Pago Point
-    if (terminalBancariaModo === 'MERCADO_PAGO' || (mercadoPagoDeviceId && !clipApiKey && terminalBancariaModo !== 'CLIP' && terminalBancariaModo !== 'TERMINAL_MANUAL_PINPAD' && terminalBancariaModo !== 'MULTI')) {
-      await triggerMercadoPagoPayment();
-      return;
-    }
-
-    // 2. Si está configurado para Clip
-    if (terminalBancariaModo === 'CLIP' || (clipApiKey && !mercadoPagoDeviceId && terminalBancariaModo !== 'MERCADO_PAGO' && terminalBancariaModo !== 'TERMINAL_MANUAL_PINPAD' && terminalBancariaModo !== 'MULTI')) {
-      await triggerClipPayment();
-      return;
-    }
-
-    // 3. Si tiene múltiples terminales activas o modo MULTI
-    if (terminalBancariaModo === 'MULTI' || (Boolean(mercadoPagoDeviceId) && Boolean(clipApiKey))) {
-      setShowSelectTerminalModal(true);
-      return;
-    }
-
-    // 4. Terminal Bancaria manual / Pinpad tradicional
-    setIsProcessing(true);
-  };
-
   // Cobro directo con otros métodos (1 solo clic / 1 tecla)
   const handleFastDirectPayment = async (method: string) => {
     if (cart.length === 0 || total <= 0) {
@@ -882,10 +851,6 @@ export default function PosTerminal() {
     }
     setPaymentMethod(method);
 
-    if (method === 'TARJETA') {
-      await handleCardPaymentRoute();
-      return;
-    }
     if (method === 'MERCADO PAGO') {
       await triggerMercadoPagoPayment();
       return;
@@ -906,15 +871,12 @@ export default function PosTerminal() {
       return;
     }
 
-    // TRANSFERENCIA, CRÉDITO, MONEDERO: Cobro directo por el total exacto
+    // TARJETA, TRANSFERENCIA, CRÉDITO, MONEDERO: Cobro directo por el total exacto
     const { processSale, lastError } = usePosStore.getState();
     const ticket = await processSale(method, client.name || 'PUBLICO GENERAL', total);
     if (ticket) {
       setLastTicket(ticket);
       setShowTicketModal(true);
-      if (method === 'EFECTIVO') {
-        openCashDrawer(ticketPrinterName);
-      }
       setMontoRecibido('');
       setPaymentMethod('EFECTIVO');
       setClient({ name: 'PUBLICO GENERAL', monedero: 0, id: 0 });
@@ -1411,14 +1373,14 @@ function resolveTicketPx(val: any, defaultPx: number): string {
         return;
       }
 
-      // F7 y F10: Tarjeta Unificada (Bancaria, Clip o Mercado Pago)
-      if (e.key === 'F7' || e.key === 'F10') {
+      // F7: Tarjeta (1 clic / cobro directo)
+      if (e.key === 'F7') {
         e.preventDefault();
-        handleCardPaymentRoute();
+        handleFastDirectPayment('TARJETA');
         return;
       }
 
-      // F8: Transferencia / QR (1 clic / cobro directo)
+      // F8: Transferencia (1 clic / cobro directo)
       if (e.key === 'F8') {
         e.preventDefault();
         handleFastDirectPayment('TRANSFERENCIA');
@@ -1429,6 +1391,13 @@ function resolveTicketPx(val: any, defaultPx: number): string {
       if (e.key === 'F9') {
         e.preventDefault();
         handleFastDirectPayment('CRÉDITO');
+        return;
+      }
+
+      // F10: Terminal Mercado Pago Point
+      if (e.key === 'F10') {
+        e.preventDefault();
+        handleFastDirectPayment('MERCADO PAGO');
         return;
       }
 
@@ -1920,30 +1889,30 @@ function resolveTicketPx(val: any, defaultPx: number): string {
             </span>
             <div className="grid grid-cols-2 gap-2 mb-2">
               <button
-                onClick={() => handleCardPaymentRoute()}
-                className="flex items-center gap-2 p-2.5 rounded-xl border border-blue-500/30 bg-blue-950/30 hover:bg-blue-900/40 text-blue-300 font-bold text-xs transition-colors group text-left cursor-pointer"
+                onClick={() => handleFastDirectPayment('TARJETA')}
+                className="flex items-center gap-2 p-2.5 rounded-xl border border-blue-500/30 bg-blue-950/30 hover:bg-blue-900/40 text-blue-300 font-bold text-xs transition-colors group text-left"
               >
                 <CreditCard className="w-4 h-4 text-blue-400 shrink-0 group-hover:scale-110 transition-transform" />
                 <div className="leading-tight">
                   <div className="font-black text-white">TARJETA</div>
-                  <div className="text-[8px] text-blue-400 font-mono">[F7 / F10]</div>
+                  <div className="text-[8px] text-blue-400 font-mono">[F7 Directo]</div>
                 </div>
               </button>
 
               <button
                 onClick={() => handleFastDirectPayment('TRANSFERENCIA')}
-                className="flex items-center gap-2 p-2.5 rounded-xl border border-cyan-500/30 bg-cyan-950/30 hover:bg-cyan-900/40 text-cyan-300 font-bold text-xs transition-colors group text-left cursor-pointer"
+                className="flex items-center gap-2 p-2.5 rounded-xl border border-cyan-500/30 bg-cyan-950/30 hover:bg-cyan-900/40 text-cyan-300 font-bold text-xs transition-colors group text-left"
               >
                 <FileSpreadsheet className="w-4 h-4 text-cyan-400 shrink-0 group-hover:scale-110 transition-transform" />
                 <div className="leading-tight">
-                  <div className="font-black text-white">TRANSF. / QR</div>
+                  <div className="font-black text-white">TRANSF.</div>
                   <div className="text-[8px] text-cyan-400 font-mono">[F8 Directo]</div>
                 </div>
               </button>
 
               <button
                 onClick={() => handleFastDirectPayment('CRÉDITO')}
-                className="flex items-center gap-2 p-2.5 rounded-xl border border-purple-500/30 bg-purple-950/30 hover:bg-purple-900/40 text-purple-300 font-bold text-xs transition-colors group text-left cursor-pointer"
+                className="flex items-center gap-2 p-2.5 rounded-xl border border-purple-500/30 bg-purple-950/30 hover:bg-purple-900/40 text-purple-300 font-bold text-xs transition-colors group text-left"
               >
                 <UserCheck className="w-4 h-4 text-purple-400 shrink-0 group-hover:scale-110 transition-transform" />
                 <div className="leading-tight">
@@ -1954,7 +1923,7 @@ function resolveTicketPx(val: any, defaultPx: number): string {
 
               <button
                 onClick={() => handleFastDirectPayment('MIXTO')}
-                className="flex items-center gap-2 p-2.5 rounded-xl border border-amber-500/30 bg-amber-950/30 hover:bg-amber-900/40 text-amber-300 font-bold text-xs transition-colors group text-left cursor-pointer"
+                className="flex items-center gap-2 p-2.5 rounded-xl border border-amber-500/30 bg-amber-950/30 hover:bg-amber-900/40 text-amber-300 font-bold text-xs transition-colors group text-left"
               >
                 <Layers className="w-4 h-4 text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
                 <div className="leading-tight">
@@ -1964,14 +1933,35 @@ function resolveTicketPx(val: any, defaultPx: number): string {
               </button>
             </div>
 
-            {/* Monedero Electrónico Unificado */}
-            <button
-              onClick={() => handleFastDirectPayment('MONEDERO')}
-              className="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl border border-fuchsia-500/30 bg-fuchsia-950/20 hover:bg-fuchsia-900/30 text-fuchsia-300 font-black text-xs transition-colors cursor-pointer"
-            >
-              <Coins className="w-4 h-4 text-fuchsia-400" />
-              <span>MONEDERO ELECTRÓNICO (PUNTOS) [F11]</span>
-            </button>
+            {/* Terminales Digitales y Monedero */}
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                onClick={() => handleFastDirectPayment('MERCADO PAGO')}
+                className="p-2 rounded-lg border border-sky-500/30 bg-sky-950/20 hover:bg-sky-900/30 text-sky-300 text-[10px] font-black transition-colors text-center"
+              >
+                <div>POINT MP</div>
+                <div className="text-[8px] text-sky-400 font-mono">[F10]</div>
+              </button>
+
+              <button
+                onClick={() => handleFastDirectPayment('CLIP')}
+                className="p-2 rounded-lg border border-orange-500/30 bg-orange-950/20 hover:bg-orange-900/30 text-orange-300 text-[10px] font-black transition-colors text-center"
+              >
+                <div>CLIP</div>
+                <div className="text-[8px] text-orange-400 font-mono">Terminal</div>
+              </button>
+
+              <button
+                onClick={() => handleFastDirectPayment('MONEDERO')}
+                className="p-2 rounded-lg border border-fuchsia-500/30 bg-fuchsia-950/20 hover:bg-fuchsia-900/30 text-fuchsia-300 text-[10px] font-black transition-colors text-center"
+              >
+                <div className="flex items-center justify-center gap-1">
+                  <Wallet className="w-2.5 h-2.5 text-fuchsia-400" />
+                  <span>MONEDERO</span>
+                </div>
+                <div className="text-[8px] text-fuchsia-400 font-mono">[F11]</div>
+              </button>
+            </div>
           </div>
 
           {/* PAUSAR / RECUPERAR / BOTÓN COBRAR (F12) */}
@@ -2302,84 +2292,6 @@ function resolveTicketPx(val: any, defaultPx: number): string {
                 className="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-3.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-amber-600/30 transition-all flex items-center justify-center gap-2"
               >
                 <CheckCircle2 className="w-4 h-4" /> CONFIRMAR VENTA MIXTA
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL SELECCIONAR TERMINAL DE PAGO (PARA NEGOCIOS MULTI-TERMINAL) */}
-      {showSelectTerminalModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b1120]/90 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-nexus-900 border border-blue-500/50 p-6 rounded-3xl shadow-2xl max-w-md w-full space-y-4">
-            <div className="flex justify-between items-center border-b border-nexus-800 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-blue-600/20 text-blue-400 rounded-xl">
-                  <CreditCard className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-black text-white text-base">Cobro con Tarjeta</h3>
-                  <p className="text-[10px] text-slate-400 font-bold">Selecciona la terminal a utilizar para esta venta</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setShowSelectTerminalModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg bg-nexus-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-2.5">
-              <button
-                onClick={async () => {
-                  setShowSelectTerminalModal(false);
-                  await triggerMercadoPagoPayment();
-                }}
-                className="w-full p-4 rounded-2xl bg-sky-950/40 hover:bg-sky-900/50 border border-sky-500/40 text-left flex items-center justify-between group transition-all cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <SmartphoneNfc className="w-6 h-6 text-sky-400 group-hover:scale-110 transition-transform" />
-                  <div>
-                    <h4 className="font-black text-white text-sm">Mercado Pago Point</h4>
-                    <p className="text-[11px] text-sky-300 font-bold">Enviar cobro inalámbrico a maquinita Point</p>
-                  </div>
-                </div>
-                <span className="text-xs font-mono font-black text-sky-400">${total.toFixed(2)}</span>
-              </button>
-
-              <button
-                onClick={async () => {
-                  setShowSelectTerminalModal(false);
-                  await triggerClipPayment();
-                }}
-                className="w-full p-4 rounded-2xl bg-orange-950/40 hover:bg-orange-900/50 border border-orange-500/40 text-left flex items-center justify-between group transition-all cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <CreditCard className="w-6 h-6 text-orange-400 group-hover:scale-110 transition-transform" />
-                  <div>
-                    <h4 className="font-black text-white text-sm">Terminal Clip</h4>
-                    <p className="text-[11px] text-orange-300 font-bold">Cobrar en maquinita Clip</p>
-                  </div>
-                </div>
-                <span className="text-xs font-mono font-black text-orange-400">${total.toFixed(2)}</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setShowSelectTerminalModal(false);
-                  setIsProcessing(true);
-                }}
-                className="w-full p-4 rounded-2xl bg-blue-950/40 hover:bg-blue-900/50 border border-blue-500/40 text-left flex items-center justify-between group transition-all cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <CreditCard className="w-6 h-6 text-blue-400 group-hover:scale-110 transition-transform" />
-                  <div>
-                    <h4 className="font-black text-white text-sm">Terminal Bancaria Tradicional</h4>
-                    <p className="text-[11px] text-blue-300 font-bold">BBVA, Banorte, Santander o manual con voucher</p>
-                  </div>
-                </div>
-                <span className="text-xs font-mono font-black text-blue-400">${total.toFixed(2)}</span>
               </button>
             </div>
           </div>
